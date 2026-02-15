@@ -62,7 +62,7 @@ class Settings(BaseSettings):
     # How often to refresh data, in seconds.
     # TfL updates roughly every 30s, TransportAPI free tier allows ~1 req/sec
     # but there's no need to poll that fast for a departure board.
-    refresh_interval_seconds: int = 30
+    refresh_interval_seconds: int = 300
 
     # --- App metadata ---
     app_title: str = "🚂 Departure Board"
