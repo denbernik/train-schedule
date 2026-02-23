@@ -5,6 +5,8 @@ from src.clients.transport_api import fetch_departures as fetch_national_rail
 from src.models import StationBoard
 from src.routes import RouteLeg, load_routes
 
+_TFL_MAX_RESULTS = 10
+
 
 def _fetch_leg(leg: RouteLeg) -> StationBoard:
     if leg.api_source == "transport_api":
@@ -13,7 +15,11 @@ def _fetch_leg(leg: RouteLeg) -> StationBoard:
             calling_at=leg.destination_station_id,
         )
     if leg.api_source == "tfl":
-        return fetch_tfl(station_id=leg.origin_station_id)
+        return fetch_tfl(
+            station_id=leg.origin_station_id,
+            destination_station_id=leg.destination_station_id,
+            max_results=_TFL_MAX_RESULTS,
+        )
     raise ValueError(f"Unknown api_source: {leg.api_source}")
 
 

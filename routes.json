@@ -19,7 +19,7 @@
       {
         "origin_station_id": "940GZZLUEPY",
         "origin_name": "East Putney",
-        "destination_station_id": "940GZZLUECR",
+        "destination_station_id": "940GZZLUECT",
         "destination_name": "Earl's Court",
         "transport_mode": "TFL_TUBE",
         "api_source": "tfl"

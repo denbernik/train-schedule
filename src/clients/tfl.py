@@ -22,6 +22,7 @@ from datetime import datetime
 import requests
 
 from src.config import get_settings
+from src.clients.tfl_topology import TopologyUnavailableError, TubeTopologyProvider
 from src.models import Departure, DepartureStatus, StationBoard, StationType
 
 logger = logging.getLogger(__name__)
@@ -34,11 +35,13 @@ _BASE_URL = "https://api.tfl.gov.uk"
 # A departure board that hangs for 10+ seconds is worse than one showing
 # stale data, so we keep this relatively tight.
 _TIMEOUT_SECONDS = 10
+_topology_provider: TubeTopologyProvider | None = None
 
 
 def fetch_departures(
     station_id: str | None = None,
     max_results: int | None = None,
+    destination_station_id: str | None = None,
 ) -> StationBoard:
     """
     Fetch live arrival predictions for a TfL station.
@@ -48,6 +51,8 @@ def fetch_departures(
                     Defaults to the configured station if not provided.
         max_results: Maximum number of departures to return.
                      Defaults to the configured max_departures.
+        destination_station_id: Optional NaPTAN ID to keep only services that
+                                pass through this station.
 
     Returns:
         StationBoard with departures sorted by expected arrival time.
@@ -65,6 +70,14 @@ def fetch_departures(
 
     try:
         raw_arrivals = _call_api(station_id, settings.tfl_api_key)
+        raw_arrivals, filter_error = _filter_arrivals_for_destination(
+            raw_arrivals=raw_arrivals,
+            origin_station_id=station_id,
+            destination_station_id=destination_station_id,
+            api_key=settings.tfl_api_key,
+        )
+        if filter_error:
+            return _error_board(station_id, filter_error)
         departures = _parse_arrivals(raw_arrivals)
 
         # Sort by expected time and take only what we need
@@ -120,6 +133,79 @@ def _call_api(station_id: str, api_key: str) -> list[dict]:
     response.raise_for_status()
 
     return response.json()
+
+
+def _get_topology_provider(api_key: str) -> TubeTopologyProvider:
+    """Lazily initialise a topology provider reused across refreshes."""
+    global _topology_provider
+    if _topology_provider is None or _topology_provider.api_key != api_key:
+        _topology_provider = TubeTopologyProvider(api_key=api_key)
+    return _topology_provider
+
+
+def _filter_arrivals_for_destination(
+    raw_arrivals: list[dict],
+    origin_station_id: str,
+    destination_station_id: str | None,
+    api_key: str,
+) -> tuple[list[dict], str | None]:
+    """
+    Keep arrivals where the train route passes through destination_station_id.
+
+    Returns filtered arrivals and optional error message.
+    """
+    if not destination_station_id:
+        return raw_arrivals, None
+    if not raw_arrivals:
+        return raw_arrivals, None
+
+    line_ids = {
+        arrival.get("lineId", "").strip().lower()
+        for arrival in raw_arrivals
+        if isinstance(arrival.get("lineId"), str) and arrival.get("modeName") == "tube"
+    }
+    if not line_ids:
+        return raw_arrivals, None
+
+    provider = _get_topology_provider(api_key)
+    try:
+        reachable = any(
+            provider.has_path(line_id, origin_station_id, destination_station_id)
+            for line_id in line_ids
+        )
+    except TopologyUnavailableError as e:
+        logger.warning("Unable to evaluate TfL destination filter: %s", e)
+        return raw_arrivals, None
+
+    if not reachable:
+        return [], (
+            f"Configured destination {destination_station_id} is not reachable "
+            f"from {origin_station_id} on this Tube leg"
+        )
+
+    filtered: list[dict] = []
+    for arrival in raw_arrivals:
+        line_id = arrival.get("lineId")
+        terminal_station_id = arrival.get("destinationNaptanId")
+        mode_name = arrival.get("modeName")
+        if mode_name != "tube":
+            continue
+        if not isinstance(line_id, str) or not isinstance(terminal_station_id, str):
+            # No destination station id in payload: cannot safely prove pass-through.
+            continue
+        try:
+            if provider.service_passes_through(
+                line_id=line_id,
+                origin_station_id=origin_station_id,
+                destination_station_id=destination_station_id,
+                terminal_station_id=terminal_station_id,
+            ):
+                filtered.append(arrival)
+        except TopologyUnavailableError as e:
+            logger.warning("Unable to evaluate service pass-through: %s", e)
+            return raw_arrivals, None
+
+    return filtered, None
 
 
 def _parse_arrivals(raw_arrivals: list[dict]) -> list[Departure]:
