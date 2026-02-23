@@ -1,0 +1,30 @@
+[
+  {
+    "name": "Wandsworth Town to Waterloo",
+    "legs": [
+      {
+        "origin_station_id": "WNT",
+        "origin_name": "Wandsworth Town",
+        "destination_station_id": "WAT",
+        "destination_name": "London Waterloo",
+        "transport_mode": "NATIONAL_RAIL",
+        "api_source": "transport_api"
+      }
+    ],
+    "walking_time_minutes": 10
+  },
+  {
+    "name": "East Putney to Earl's Court",
+    "legs": [
+      {
+        "origin_station_id": "940GZZLUEPY",
+        "origin_name": "East Putney",
+        "destination_station_id": "940GZZLUECR",
+        "destination_name": "Earl's Court",
+        "transport_mode": "TFL_TUBE",
+        "api_source": "tfl"
+      }
+    ],
+    "walking_time_minutes": 12
+  }
+]
