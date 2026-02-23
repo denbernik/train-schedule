@@ -1,5 +1,7 @@
 from unittest.mock import MagicMock, patch
 
+import requests
+
 from src.clients.tfl import _filter_arrivals_for_destination, fetch_departures
 from src.clients.tfl_topology import TopologyUnavailableError
 
@@ -23,6 +25,69 @@ def _arrival(terminal_id: str, destination_name: str) -> dict:
         "destinationName": destination_name,
         "expectedArrival": "2026-02-23T10:00:00Z",
         "platformName": "Eastbound - Platform 1",
+    }
+
+
+def _arrival_in(minutes_from_now: int, terminal_id: str, destination_name: str) -> dict:
+    from datetime import datetime, timedelta, timezone
+
+    expected = datetime.now(timezone.utc) + timedelta(minutes=minutes_from_now)
+    return {
+        "id": f"arrival-{terminal_id}-{minutes_from_now}",
+        "stationName": "East Putney Underground Station",
+        "lineId": "district",
+        "lineName": "District",
+        "modeName": "tube",
+        "destinationNaptanId": terminal_id,
+        "destinationName": destination_name,
+        "expectedArrival": expected.isoformat().replace("+00:00", "Z"),
+        "platformName": "Eastbound - Platform 1",
+        "direction": "outbound",
+    }
+
+
+def _timetable_payload_from_now(minutes_from_now: list[int]) -> dict:
+    from datetime import datetime, timedelta
+
+    now = datetime.now()
+    known_journeys = []
+    for minute_offset in minutes_from_now:
+        point = now + timedelta(minutes=minute_offset)
+        known_journeys.append(
+            {"hour": point.hour, "minute": point.minute, "intervalId": "int-upminster"}
+        )
+
+    return {
+        "lineName": "District",
+        "stops": [
+            {"id": EAST_PUTNEY, "name": "East Putney Underground Station"},
+            {"id": EARLS_COURT, "name": "Earl's Court Underground Station"},
+            {"id": UPMINSTER, "name": "Upminster Underground Station"},
+            {"id": TOWER_HILL, "name": "Tower Hill Underground Station"},
+        ],
+        "timetable": {
+            "routes": [
+                {
+                    "stationIntervals": [
+                        {
+                            "id": "int-upminster",
+                            "intervals": [
+                                {"stopId": EARLS_COURT, "timeToArrival": 180},
+                                {"stopId": UPMINSTER, "timeToArrival": 3600},
+                            ],
+                        },
+                        {
+                            "id": "int-tower",
+                            "intervals": [
+                                {"stopId": EARLS_COURT, "timeToArrival": 180},
+                                {"stopId": TOWER_HILL, "timeToArrival": 1800},
+                            ],
+                        },
+                    ],
+                    "schedules": [{"knownJourneys": known_journeys}],
+                }
+            ]
+        },
     }
 
 
@@ -194,3 +259,138 @@ def test_fetch_departures_returns_explicit_error_for_invalid_leg(
     assert board.has_error
     assert "not reachable" in (board.error_message or "")
     assert board.departures == []
+
+
+@patch("src.clients.tfl._get_topology_provider", return_value=FakeTopologyProvider())
+@patch("src.clients.tfl._call_timetable_api")
+@patch("src.clients.tfl._call_api")
+@patch("src.clients.tfl.get_settings")
+def test_live_at_or_above_window_does_not_query_timetable(
+    mock_settings,
+    mock_call_api,
+    mock_call_timetable_api,
+    mock_provider,
+):
+    live_rows = [_arrival_in(i + 1, UPMINSTER, "Upminster") for i in range(15)]
+    mock_call_api.return_value = live_rows
+
+    settings = MagicMock()
+    settings.tfl_station_id = EAST_PUTNEY
+    settings.max_departures = 5
+    settings.tfl_max_departures = 15
+    settings.tfl_api_key = "test-key"
+    mock_settings.return_value = settings
+
+    board = fetch_departures(
+        station_id=EAST_PUTNEY,
+        destination_station_id=EARLS_COURT,
+        max_results=15,
+    )
+
+    assert not board.has_error
+    assert len(board.departures) == 15
+    mock_call_timetable_api.assert_not_called()
+
+
+@patch("src.clients.tfl._get_topology_provider", return_value=FakeTopologyProvider())
+@patch("src.clients.tfl._call_timetable_api")
+@patch("src.clients.tfl._call_api")
+@patch("src.clients.tfl.get_settings")
+def test_live_below_window_fills_from_timetable_to_target(
+    mock_settings,
+    mock_call_api,
+    mock_call_timetable_api,
+    mock_provider,
+):
+    live_rows = [_arrival_in(2, UPMINSTER, "Upminster"), _arrival_in(7, UPMINSTER, "Upminster")]
+    mock_call_api.return_value = live_rows
+    mock_call_timetable_api.return_value = _timetable_payload_from_now(
+        [10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34]
+    )
+
+    settings = MagicMock()
+    settings.tfl_station_id = EAST_PUTNEY
+    settings.max_departures = 5
+    settings.tfl_max_departures = 15
+    settings.tfl_api_key = "test-key"
+    mock_settings.return_value = settings
+
+    board = fetch_departures(
+        station_id=EAST_PUTNEY,
+        destination_station_id=EARLS_COURT,
+        max_results=15,
+    )
+
+    assert not board.has_error
+    assert len(board.departures) == 15
+    # Timetable should have been queried at least once when live rows were insufficient
+    assert mock_call_timetable_api.call_count >= 1
+
+
+@patch("src.clients.tfl._get_topology_provider", return_value=FakeTopologyProvider())
+@patch("src.clients.tfl._call_timetable_api", side_effect=requests.RequestException("boom"))
+@patch("src.clients.tfl._call_api")
+@patch("src.clients.tfl.get_settings")
+def test_timetable_failure_falls_back_to_live_only(
+    mock_settings,
+    mock_call_api,
+    mock_call_timetable_api,
+    mock_provider,
+):
+    live_rows = [_arrival_in(3, UPMINSTER, "Upminster"), _arrival_in(8, UPMINSTER, "Upminster")]
+    mock_call_api.return_value = live_rows
+
+    settings = MagicMock()
+    settings.tfl_station_id = EAST_PUTNEY
+    settings.max_departures = 5
+    settings.tfl_max_departures = 15
+    settings.tfl_api_key = "test-key"
+    mock_settings.return_value = settings
+
+    board = fetch_departures(
+        station_id=EAST_PUTNEY,
+        destination_station_id=EARLS_COURT,
+        max_results=15,
+    )
+
+    assert not board.has_error
+    assert len(board.departures) == 2
+    assert mock_call_timetable_api.call_count >= 1
+
+
+@patch("src.clients.tfl._get_topology_provider", return_value=FakeTopologyProvider())
+@patch("src.clients.tfl._call_timetable_api")
+@patch("src.clients.tfl._call_api")
+@patch("src.clients.tfl.get_settings")
+def test_merge_deduplicates_live_and_timetable_rows(
+    mock_settings,
+    mock_call_api,
+    mock_call_timetable_api,
+    mock_provider,
+):
+    live_rows = [
+        _arrival_in(5, UPMINSTER, "Upminster"),
+        _arrival_in(10, UPMINSTER, "Upminster"),
+    ]
+    mock_call_api.return_value = live_rows
+    # Include a timetable journey at +10 min that should dedupe against live row.
+    mock_call_timetable_api.return_value = _timetable_payload_from_now([10, 12, 14, 16, 18, 20])
+
+    settings = MagicMock()
+    settings.tfl_station_id = EAST_PUTNEY
+    settings.max_departures = 5
+    settings.tfl_max_departures = 15
+    settings.tfl_api_key = "test-key"
+    mock_settings.return_value = settings
+
+    board = fetch_departures(
+        station_id=EAST_PUTNEY,
+        destination_station_id=EARLS_COURT,
+        max_results=15,
+    )
+
+    keys = {
+        (d.destination, d.operator, d.expected_time.strftime("%Y-%m-%d %H:%M"))
+        for d in board.departures
+    }
+    assert len(keys) == len(board.departures)

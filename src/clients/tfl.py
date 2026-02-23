@@ -17,7 +17,7 @@ TfL doesn't distinguish between the two for live predictions.
 """
 
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import requests
 
@@ -36,6 +36,7 @@ _BASE_URL = "https://api.tfl.gov.uk"
 # stale data, so we keep this relatively tight.
 _TIMEOUT_SECONDS = 10
 _topology_provider: TubeTopologyProvider | None = None
+_TIMETABLE_HORIZON_HOURS = 12
 
 
 def fetch_departures(
@@ -66,32 +67,56 @@ def fetch_departures(
     """
     settings = get_settings()
     station_id = station_id or settings.tfl_station_id
-    max_results = max_results or settings.max_departures
+    max_results = max_results or getattr(settings, "tfl_max_departures", settings.max_departures)
 
     try:
-        raw_arrivals = _call_api(station_id, settings.tfl_api_key)
-        raw_arrivals, filter_error = _filter_arrivals_for_destination(
-            raw_arrivals=raw_arrivals,
+        all_live_raw_arrivals = _call_api(station_id, settings.tfl_api_key)
+        live_raw_arrivals, filter_error = _filter_arrivals_for_destination(
+            raw_arrivals=all_live_raw_arrivals,
             origin_station_id=station_id,
             destination_station_id=destination_station_id,
             api_key=settings.tfl_api_key,
         )
         if filter_error:
             return _error_board(station_id, filter_error)
-        departures = _parse_arrivals(raw_arrivals)
 
-        # Sort by expected time and take only what we need
-        departures.sort(key=lambda d: d.expected_time)
-        departures = departures[:max_results]
+        live_departures = _parse_arrivals(live_raw_arrivals)
+        timetable_departures: list[Departure] = []
+
+        if destination_station_id and len(live_departures) < max_results:
+            timetable_raw_arrivals = _fetch_timetable_candidates(
+                origin_station_id=station_id,
+                live_raw_arrivals=all_live_raw_arrivals,
+                api_key=settings.tfl_api_key,
+            )
+
+            if timetable_raw_arrivals:
+                timetable_raw_arrivals, timetable_filter_error = _filter_arrivals_for_destination(
+                    raw_arrivals=timetable_raw_arrivals,
+                    origin_station_id=station_id,
+                    destination_station_id=destination_station_id,
+                    api_key=settings.tfl_api_key,
+                )
+                if timetable_filter_error:
+                    return _error_board(station_id, timetable_filter_error)
+                timetable_departures = _parse_timetable_arrivals(timetable_raw_arrivals)
+
+        departures = _merge_departures_live_first(
+            live_departures=live_departures,
+            timetable_departures=timetable_departures,
+            max_results=max_results,
+        )
 
         logger.info(
-            "TfL: fetched %d departures for station %s",
+            "TfL: fetched %d departures for station %s (live=%d timetable=%d)",
             len(departures),
             station_id,
+            len(live_departures),
+            len(timetable_departures),
         )
 
         return StationBoard(
-            station_name=_extract_station_name(raw_arrivals, station_id),
+            station_name=_extract_station_name(all_live_raw_arrivals, station_id),
             station_type=StationType.TFL_TUBE,
             departures=departures,
         )
@@ -133,6 +158,257 @@ def _call_api(station_id: str, api_key: str) -> list[dict]:
     response.raise_for_status()
 
     return response.json()
+
+
+def _call_timetable_api(line_id: str, stop_id: str, direction: str, api_key: str) -> dict:
+    """
+    Request scheduled timetable data for a line/stop/direction.
+
+    Endpoint:
+      GET /Line/{lineId}/Timetable/{stopId}?direction={inbound|outbound}
+    """
+    url = f"{_BASE_URL}/Line/{line_id}/Timetable/{stop_id}"
+    params = {"direction": direction}
+    if api_key:
+        params["app_key"] = api_key
+
+    response = requests.get(url, params=params, timeout=_TIMEOUT_SECONDS)
+    response.raise_for_status()
+    return response.json()
+
+
+def _fetch_timetable_candidates(
+    origin_station_id: str,
+    live_raw_arrivals: list[dict],
+    api_key: str,
+) -> list[dict]:
+    """
+    Build arrival-like timetable candidates from known journeys.
+
+    We query relevant line IDs discovered in live arrivals, for directions seen
+    in the payload. If direction data is missing, query both directions.
+    """
+    line_ids = sorted(
+        {
+            item.get("lineId", "").strip().lower()
+            for item in live_raw_arrivals
+            if isinstance(item.get("lineId"), str) and item.get("modeName") == "tube"
+        }
+    )
+    if not line_ids:
+        return []
+
+    live_directions = sorted(
+        {
+            item.get("direction", "").strip().lower()
+            for item in live_raw_arrivals
+            if isinstance(item.get("direction"), str)
+        }
+    )
+    directions = [d for d in live_directions if d in ("inbound", "outbound")] or [
+        "outbound",
+        "inbound",
+    ]
+
+    candidates: list[dict] = []
+    for line_id in line_ids:
+        for direction in directions:
+            try:
+                payload = _call_timetable_api(
+                    line_id=line_id,
+                    stop_id=origin_station_id,
+                    direction=direction,
+                    api_key=api_key,
+                )
+                candidates.extend(
+                    _parse_timetable_response_to_arrivals(
+                        payload=payload,
+                        line_id=line_id,
+                        direction=direction,
+                        origin_station_id=origin_station_id,
+                    )
+                )
+            except requests.RequestException as e:
+                logger.warning(
+                    "TfL timetable request failed for %s/%s at %s: %s",
+                    line_id,
+                    direction,
+                    origin_station_id,
+                    e,
+                )
+            except (KeyError, TypeError, ValueError) as e:
+                logger.warning(
+                    "TfL timetable parse failed for %s/%s at %s: %s",
+                    line_id,
+                    direction,
+                    origin_station_id,
+                    e,
+                )
+
+    return candidates
+
+
+def _parse_timetable_response_to_arrivals(
+    payload: dict,
+    line_id: str,
+    direction: str,
+    origin_station_id: str,
+) -> list[dict]:
+    """
+    Convert timetable knownJourneys into arrival-like dictionaries.
+
+    These rows are later filtered with the same pass-through logic used for
+    live arrivals.
+    """
+    timetable = payload.get("timetable", {})
+    routes = timetable.get("routes", [])
+    if not isinstance(routes, list):
+        return []
+
+    stop_name_map = _extract_stop_name_map(payload)
+    line_name = payload.get("lineName", line_id.title())
+    origin_name = stop_name_map.get(origin_station_id, origin_station_id)
+    now = datetime.now().astimezone()
+    horizon = now + timedelta(hours=_TIMETABLE_HORIZON_HOURS)
+
+    arrivals: list[dict] = []
+    for route in routes:
+        if not isinstance(route, dict):
+            continue
+        terminal_by_interval = _build_interval_terminal_map(route)
+        schedules = route.get("schedules", [])
+        if not isinstance(schedules, list):
+            continue
+
+        for schedule in schedules:
+            if not isinstance(schedule, dict):
+                continue
+            known_journeys = schedule.get("knownJourneys", [])
+            if not isinstance(known_journeys, list):
+                continue
+
+            for journey in known_journeys:
+                if not isinstance(journey, dict):
+                    continue
+
+                terminal_station_id = terminal_by_interval.get(str(journey.get("intervalId")))
+                if not terminal_station_id:
+                    continue
+
+                departure_dt = _next_departure_datetime(
+                    hour=journey.get("hour"),
+                    minute=journey.get("minute"),
+                    now=now,
+                )
+                if departure_dt is None:
+                    continue
+                if departure_dt > horizon:
+                    continue
+
+                destination_name = stop_name_map.get(terminal_station_id, terminal_station_id)
+                row_id = (
+                    f"tt-{line_id}-{direction}-{journey.get('intervalId')}-"
+                    f"{departure_dt.strftime('%Y%m%d%H%M')}-{terminal_station_id}"
+                )
+                arrivals.append(
+                    {
+                        "id": row_id,
+                        "stationName": origin_name,
+                        "lineId": line_id,
+                        "lineName": line_name,
+                        "modeName": "tube",
+                        "destinationNaptanId": terminal_station_id,
+                        "destinationName": destination_name,
+                        "expectedArrival": departure_dt.isoformat(),
+                        "platformName": f"{direction.title()} (Timetable)",
+                        "direction": direction,
+                    }
+                )
+
+    return arrivals
+
+
+def _build_interval_terminal_map(route: dict) -> dict[str, str]:
+    """
+    Map interval IDs to terminal stop IDs using max timeToArrival.
+    """
+    station_intervals = route.get("stationIntervals", [])
+    if not isinstance(station_intervals, list):
+        return {}
+
+    mapping: dict[str, str] = {}
+    for station_interval in station_intervals:
+        if not isinstance(station_interval, dict):
+            continue
+        interval_id_raw = station_interval.get("id")
+        if interval_id_raw is None:
+            continue
+        interval_id = str(interval_id_raw)
+        intervals = station_interval.get("intervals", [])
+        if not isinstance(intervals, list) or not intervals:
+            continue
+
+        best_stop_id: str | None = None
+        best_time = -1
+        for interval in intervals:
+            if not isinstance(interval, dict):
+                continue
+            stop_id = interval.get("stopId")
+            time_to_arrival = interval.get("timeToArrival")
+            if not isinstance(stop_id, str):
+                continue
+            if not isinstance(time_to_arrival, (int, float)):
+                continue
+            time_value = float(time_to_arrival)
+            if time_value > best_time:
+                best_time = time_value
+                best_stop_id = stop_id
+
+        if best_stop_id:
+            mapping[interval_id] = best_stop_id
+
+    return mapping
+
+
+def _extract_stop_name_map(payload: dict) -> dict[str, str]:
+    """Extract id->name mapping from timetable payload station/stop sections."""
+    name_map: dict[str, str] = {}
+
+    for key in ("stops", "stations"):
+        items = payload.get(key, [])
+        if not isinstance(items, list):
+            continue
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            station_id = item.get("id") or item.get("stationId")
+            name = item.get("name")
+            if isinstance(station_id, str) and isinstance(name, str):
+                name_map[station_id] = name
+
+    return name_map
+
+
+def _next_departure_datetime(
+    hour: int | str | None,
+    minute: int | str | None,
+    now: datetime,
+) -> datetime | None:
+    """Convert timetable hour/minute to next datetime from now (today/tomorrow)."""
+    try:
+        hour_int = int(hour)
+        minute_int = int(minute)
+    except (TypeError, ValueError):
+        return None
+
+    if minute_int < 0 or minute_int >= 60 or hour_int < 0:
+        return None
+
+    day_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    candidate = day_start + timedelta(hours=hour_int, minutes=minute_int)
+    while candidate < now:
+        candidate += timedelta(days=1)
+    return candidate
 
 
 def _get_topology_provider(api_key: str) -> TubeTopologyProvider:
@@ -246,6 +522,40 @@ def _parse_arrivals(raw_arrivals: list[dict]) -> list[Departure]:
     return departures
 
 
+def _parse_timetable_arrivals(raw_arrivals: list[dict]) -> list[Departure]:
+    """
+    Parse timetable-derived rows into Departure objects.
+
+    Timetable rows are scheduled estimates, so status is NO_REPORT and delay=0.
+    """
+    departures: list[Departure] = []
+    for arrival in raw_arrivals:
+        try:
+            expected_time = datetime.fromisoformat(
+                str(arrival["expectedArrival"]).replace("Z", "+00:00")
+            )
+            departures.append(
+                Departure(
+                    destination=arrival.get("destinationName", "Unknown"),
+                    scheduled_time=expected_time,
+                    expected_time=expected_time,
+                    status=DepartureStatus.NO_REPORT,
+                    platform=arrival.get("platformName"),
+                    operator=arrival.get("lineName"),
+                    delay_minutes=0,
+                )
+            )
+        except (KeyError, ValueError, TypeError) as e:
+            logger.warning(
+                "Skipping malformed TfL timetable row: %s — Error: %s",
+                arrival.get("id", "unknown"),
+                e,
+            )
+            continue
+
+    return departures
+
+
 def _parse_single_arrival(arrival: dict) -> Departure:
     """
     Parse one TfL prediction dict into a Departure.
@@ -285,6 +595,43 @@ def _extract_station_name(raw_arrivals: list[dict], fallback: str) -> str:
     if raw_arrivals:
         return raw_arrivals[0].get("stationName", fallback)
     return fallback
+
+
+def _merge_departures_live_first(
+    live_departures: list[Departure],
+    timetable_departures: list[Departure],
+    max_results: int,
+) -> list[Departure]:
+    """
+    Merge departures in live-first mode, filling gaps from timetable rows.
+    """
+    live_sorted = sorted(live_departures, key=lambda d: d.expected_time)
+    if len(live_sorted) >= max_results:
+        return live_sorted[:max_results]
+
+    merged = list(live_sorted)
+    seen = {_departure_dedupe_key(dep) for dep in merged}
+
+    for dep in sorted(timetable_departures, key=lambda d: d.expected_time):
+        if len(merged) >= max_results:
+            break
+        key = _departure_dedupe_key(dep)
+        if key in seen:
+            continue
+        seen.add(key)
+        merged.append(dep)
+
+    merged.sort(key=lambda d: d.expected_time)
+    return merged[:max_results]
+
+
+def _departure_dedupe_key(dep: Departure) -> tuple[str, str, str]:
+    """Stable dedupe key for live+timetable merge."""
+    return (
+        dep.destination.strip().lower(),
+        (dep.operator or "").strip().lower(),
+        dep.expected_time.strftime("%Y-%m-%d %H:%M"),
+    )
 
 
 def _error_board(station_id: str, message: str) -> StationBoard:

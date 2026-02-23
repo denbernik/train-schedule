@@ -61,7 +61,7 @@ class Settings(BaseSettings):
 
     # TfL board is denser than National Rail, so allow a larger default window.
     # This controls "next N trains" for TfL legs.
-    tfl_max_departures: int = 10
+    tfl_max_departures: int = 15
 
     # How often to refresh data, in seconds.
     # Keep this reasonably low so East Putney eastbound services appear quickly.
