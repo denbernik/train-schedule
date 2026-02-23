@@ -56,13 +56,17 @@ class Settings(BaseSettings):
     national_rail_station_code: str = "WNT"  # Wandsworth Town
 
     # --- Display settings ---
-    # How many departures to show per station
+    # How many departures to show per station (default fallback)
     max_departures: int = 5
 
+    # TfL board is denser than National Rail, so allow a larger default window.
+    # This controls "next N trains" for TfL legs.
+    tfl_max_departures: int = 10
+
     # How often to refresh data, in seconds.
-    # TfL updates roughly every 30s, TransportAPI free tier allows ~1 req/sec
-    # but there's no need to poll that fast for a departure board.
-    refresh_interval_seconds: int = 900
+    # Keep this reasonably low so East Putney eastbound services appear quickly.
+    # 30s is a good balance between freshness and API usage.
+    refresh_interval_seconds: int = 30
 
     # --- App metadata ---
     app_title: str = "🚂 Departure Board"

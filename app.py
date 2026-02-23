@@ -1,11 +1,15 @@
 import streamlit as st
+import streamlit.components.v1 as components
 
 from src.clients.tfl import fetch_departures as fetch_tfl
 from src.clients.transport_api import fetch_departures as fetch_national_rail
+from src.config import get_settings
 from src.models import StationBoard
 from src.routes import RouteLeg, load_routes
 
-_TFL_MAX_RESULTS = 10
+settings = get_settings()
+_TFL_MAX_RESULTS = settings.tfl_max_departures
+_REFRESH_INTERVAL_SECONDS = max(5, settings.refresh_interval_seconds)
 
 
 def _fetch_leg(leg: RouteLeg) -> StationBoard:
@@ -26,6 +30,21 @@ def _fetch_leg(leg: RouteLeg) -> StationBoard:
 routes = load_routes()
 
 st.title("🚂 Departure Board")
+st.caption(f"Auto-refresh every {_REFRESH_INTERVAL_SECONDS}s")
+
+# Streamlit 1.54 in this project doesn't expose a native autorefresh helper.
+# Inject a tiny reload timer so new departures appear without manual refresh.
+components.html(
+    f"""
+    <script>
+      setTimeout(function() {{
+        window.parent.location.reload();
+      }}, {_REFRESH_INTERVAL_SECONDS * 1000});
+    </script>
+    """,
+    height=0,
+    width=0,
+)
 
 columns = st.columns(len(routes))
 
