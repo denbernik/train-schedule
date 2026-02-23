@@ -4,12 +4,13 @@ import streamlit.components.v1 as components
 from src.clients.tfl import fetch_departures as fetch_tfl
 from src.clients.transport_api import fetch_departures as fetch_national_rail
 from src.config import get_settings
-from src.models import StationBoard
+from src.models import DepartureStatus, StationBoard
 from src.routes import RouteLeg, load_routes
 
 settings = get_settings()
 _TFL_MAX_RESULTS = settings.tfl_max_departures
 _REFRESH_INTERVAL_SECONDS = max(5, settings.refresh_interval_seconds)
+_FINAL_DISPLAY_ROWS = 5
 
 
 def _fetch_leg(leg: RouteLeg) -> StationBoard:
@@ -56,6 +57,11 @@ for col, route in zip(columns, routes):
             if board.has_error:
                 st.error(board.error_message)
             else:
-                for dep in board.departures:
+                for dep in board.departures[:_FINAL_DISPLAY_ROWS]:
                     status = f"({dep.status.value})" if dep.is_delayed or dep.is_cancelled else ""
-                    st.write(f"{dep.display_time} → {dep.destination} {status}")
+                    timetable_marker = (
+                        " *"
+                        if leg.api_source == "tfl" and dep.status == DepartureStatus.NO_REPORT
+                        else ""
+                    )
+                    st.write(f"{dep.display_time} → {dep.destination}{timetable_marker} {status}")
