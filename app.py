@@ -1,26 +1,36 @@
 import streamlit as st
+
 from src.clients.tfl import fetch_departures as fetch_tfl
 from src.clients.transport_api import fetch_departures as fetch_national_rail
+from src.models import StationBoard
+from src.routes import RouteLeg, load_routes
+
+
+def _fetch_leg(leg: RouteLeg) -> StationBoard:
+    if leg.api_source == "transport_api":
+        return fetch_national_rail(
+            station_code=leg.origin_station_id,
+            calling_at=leg.destination_station_id,
+        )
+    if leg.api_source == "tfl":
+        return fetch_tfl(station_id=leg.origin_station_id)
+    raise ValueError(f"Unknown api_source: {leg.api_source}")
+
+
+routes = load_routes()
 
 st.title("🚂 Departure Board")
 
-col1, col2 = st.columns(2)
+columns = st.columns(len(routes))
 
-with col1:
-    tfl_board = fetch_tfl()
-    st.subheader(tfl_board.station_name)
-    if tfl_board.has_error:
-        st.error(tfl_board.error_message)
-    else:
-        for dep in tfl_board.departures:
-            st.write(f"{dep.display_time} → {dep.destination}")
-
-with col2:
-    nr_board = fetch_national_rail()
-    st.subheader(nr_board.station_name)
-    if nr_board.has_error:
-        st.error(nr_board.error_message)
-    else:
-        for dep in nr_board.departures:
-            status = f"({dep.status.value})" if dep.is_delayed or dep.is_cancelled else ""
-            st.write(f"{dep.display_time} → {dep.destination} {status}")
+for col, route in zip(columns, routes):
+    with col:
+        for leg in route.legs:
+            board = _fetch_leg(leg)
+            st.subheader(f"{board.station_name} → {leg.destination_name}")
+            if board.has_error:
+                st.error(board.error_message)
+            else:
+                for dep in board.departures:
+                    status = f"({dep.status.value})" if dep.is_delayed or dep.is_cancelled else ""
+                    st.write(f"{dep.display_time} → {dep.destination} {status}")

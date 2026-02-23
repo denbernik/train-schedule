@@ -49,6 +49,7 @@ _TIMEOUT_SECONDS = 10
 def fetch_departures(
     station_code: str | None = None,
     max_results: int | None = None,
+    calling_at: str | None = None,
 ) -> StationBoard:
     """
     Fetch live departures from a National Rail station via TransportAPI.
@@ -57,6 +58,8 @@ def fetch_departures(
         station_code: 3-letter CRS code (e.g., "WNT" for Wandsworth Town).
                       Defaults to configured station.
         max_results: Max departures to return. Defaults to configured value.
+        calling_at: Optional 3-letter CRS code to return only services that
+                    call at that station.
 
     Returns:
         StationBoard with departures sorted by scheduled departure time.
@@ -71,6 +74,7 @@ def fetch_departures(
             station_code=station_code,
             app_id=settings.transport_api_app_id,
             app_key=settings.transport_api_app_key,
+            calling_at=calling_at,
         )
         departures = _parse_departures(raw_response)
 
@@ -121,7 +125,12 @@ def fetch_departures(
         return _error_board(station_code, "Unexpected data from TransportAPI")
 
 
-def _call_api(station_code: str, app_id: str, app_key: str) -> dict:
+def _call_api(
+    station_code: str,
+    app_id: str,
+    app_key: str,
+    calling_at: str | None = None,
+) -> dict:
     """
     Make the HTTP request to TransportAPI's live departures endpoint.
 
@@ -137,6 +146,8 @@ def _call_api(station_code: str, app_id: str, app_key: str) -> dict:
         "darwin": "true",           # Use Darwin feed for live status
         "train_status": "passenger", # Only passenger services, not freight
     }
+    if calling_at:
+        params["calling_at"] = calling_at
 
     response = requests.get(url, params=params, timeout=_TIMEOUT_SECONDS)
     response.raise_for_status()
