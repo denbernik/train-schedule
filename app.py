@@ -55,6 +55,10 @@ for col, route in zip(columns, routes):
         for leg in route.legs:
             board = _fetch_leg(leg)
             st.subheader(f"{board.station_name} → {leg.destination_name}")
+            st.caption(
+                f"Showing next departures you can catch: leaves in at least "
+                f"{route.walking_time_minutes} min"
+            )
             if board.has_error:
                 st.error(board.error_message)
             else:
