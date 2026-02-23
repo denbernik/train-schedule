@@ -1,9 +1,15 @@
 from unittest.mock import MagicMock, patch
 
 import requests
+from datetime import datetime, timezone
 
-from src.clients.tfl import _filter_arrivals_for_destination, fetch_departures
+from src.clients.tfl import (
+    _filter_arrivals_for_destination,
+    _merge_departures_live_first,
+    fetch_departures,
+)
 from src.clients.tfl_topology import TopologyUnavailableError
+from src.models import Departure, DepartureStatus
 
 EAST_PUTNEY = "940GZZLUEPY"
 EARLS_COURT = "940GZZLUECT"
@@ -394,3 +400,61 @@ def test_merge_deduplicates_live_and_timetable_rows(
         for d in board.departures
     }
     assert len(keys) == len(board.departures)
+
+
+def test_merge_prefers_timetable_within_one_minute_boundary():
+    base_time = datetime(2026, 2, 23, 22, 0, 30, tzinfo=timezone.utc)
+    live_dep = Departure(
+        destination="Edgware Road (Circle Line) Underground Station",
+        scheduled_time=base_time,
+        expected_time=base_time,
+        status=DepartureStatus.ON_TIME,
+        operator="District",
+    )
+    tt_time = datetime(2026, 2, 23, 22, 1, 0, tzinfo=timezone.utc)
+    tt_dep = Departure(
+        destination="Edgware Road (Circle Line) Underground Station",
+        scheduled_time=tt_time,
+        expected_time=tt_time,
+        status=DepartureStatus.NO_REPORT,
+        operator="District",
+    )
+
+    merged = _merge_departures_live_first(
+        live_departures=[live_dep],
+        timetable_departures=[tt_dep],
+        max_results=5,
+    )
+
+    assert len(merged) == 1
+    assert merged[0].status == DepartureStatus.NO_REPORT
+    assert merged[0].expected_time == tt_time
+
+
+def test_merge_drops_timetable_if_it_is_earlier_than_matching_live():
+    live_time = datetime(2026, 2, 23, 22, 1, 0, tzinfo=timezone.utc)
+    live_dep = Departure(
+        destination="Edgware Road (Circle Line) Underground Station",
+        scheduled_time=live_time,
+        expected_time=live_time,
+        status=DepartureStatus.ON_TIME,
+        operator="District",
+    )
+    tt_time = datetime(2026, 2, 23, 22, 0, 30, tzinfo=timezone.utc)
+    tt_dep = Departure(
+        destination="Edgware Road (Circle Line) Underground Station",
+        scheduled_time=tt_time,
+        expected_time=tt_time,
+        status=DepartureStatus.NO_REPORT,
+        operator="District",
+    )
+
+    merged = _merge_departures_live_first(
+        live_departures=[live_dep],
+        timetable_departures=[tt_dep],
+        max_results=5,
+    )
+
+    assert len(merged) == 1
+    assert merged[0].status == DepartureStatus.ON_TIME
+    assert merged[0].expected_time == live_time

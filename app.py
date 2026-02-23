@@ -4,6 +4,7 @@ import streamlit.components.v1 as components
 from src.clients.tfl import fetch_departures as fetch_tfl
 from src.clients.transport_api import fetch_departures as fetch_national_rail
 from src.config import get_settings
+from src.filters import filter_and_cap_departures
 from src.models import DepartureStatus, StationBoard
 from src.routes import RouteLeg, load_routes
 
@@ -57,7 +58,12 @@ for col, route in zip(columns, routes):
             if board.has_error:
                 st.error(board.error_message)
             else:
-                for dep in board.departures[:_FINAL_DISPLAY_ROWS]:
+                visible_departures = filter_and_cap_departures(
+                    departures=board.departures,
+                    walking_time_minutes=route.walking_time_minutes,
+                    max_rows=_FINAL_DISPLAY_ROWS,
+                )
+                for dep in visible_departures:
                     status = f"({dep.status.value})" if dep.is_delayed or dep.is_cancelled else ""
                     timetable_marker = (
                         " *"

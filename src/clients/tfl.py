@@ -37,6 +37,7 @@ _BASE_URL = "https://api.tfl.gov.uk"
 _TIMEOUT_SECONDS = 10
 _topology_provider: TubeTopologyProvider | None = None
 _TIMETABLE_HORIZON_HOURS = 12
+_LIVE_TT_TOLERANCE_SECONDS = 60
 
 
 def fetch_departures(
@@ -615,6 +616,24 @@ def _merge_departures_live_first(
     for dep in sorted(timetable_departures, key=lambda d: d.expected_time):
         if len(merged) >= max_results:
             break
+        live_match_index = _find_live_boundary_match_index(
+            merged_departures=merged,
+            timetable_dep=dep,
+            tolerance_seconds=_LIVE_TT_TOLERANCE_SECONDS,
+        )
+        if live_match_index is not None:
+            live_dep = merged[live_match_index]
+            # Guardrail for occasional API skew: if TT says earlier than live,
+            # keep live and drop TT.
+            if dep.expected_time < live_dep.expected_time:
+                continue
+
+            old_key = _departure_dedupe_key(live_dep)
+            seen.discard(old_key)
+            merged[live_match_index] = dep
+            seen.add(_departure_dedupe_key(dep))
+            continue
+
         key = _departure_dedupe_key(dep)
         if key in seen:
             continue
@@ -632,6 +651,36 @@ def _departure_dedupe_key(dep: Departure) -> tuple[str, str, str]:
         (dep.operator or "").strip().lower(),
         dep.expected_time.strftime("%Y-%m-%d %H:%M"),
     )
+
+
+def _find_live_boundary_match_index(
+    merged_departures: list[Departure],
+    timetable_dep: Departure,
+    tolerance_seconds: int,
+) -> int | None:
+    """
+    Find a matching live departure near timetable boundary.
+
+    Match conditions:
+    - existing row is live (status != NO_REPORT)
+    - same normalized destination and operator
+    - absolute time delta <= tolerance_seconds
+    """
+    target_destination = timetable_dep.destination.strip().lower()
+    target_operator = (timetable_dep.operator or "").strip().lower()
+
+    for index, existing in enumerate(merged_departures):
+        if existing.status == DepartureStatus.NO_REPORT:
+            continue
+        if existing.destination.strip().lower() != target_destination:
+            continue
+        if (existing.operator or "").strip().lower() != target_operator:
+            continue
+        delta_seconds = abs((timetable_dep.expected_time - existing.expected_time).total_seconds())
+        if delta_seconds <= tolerance_seconds:
+            return index
+
+    return None
 
 
 def _error_board(station_id: str, message: str) -> StationBoard:
