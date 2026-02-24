@@ -1,11 +1,10 @@
 import streamlit as st
 import streamlit.components.v1 as components
 
-from src.clients.tfl import fetch_departures as fetch_tfl
-from src.clients.transport_api import fetch_departures as fetch_national_rail
 from src.config import get_settings
 from src.filters import filter_and_cap_departures
 from src.models import DepartureStatus, StationBoard
+from src.refresh import fetch_tfl_for_leg, fetch_transport_for_leg
 from src.routes import RouteLeg, load_routes
 
 settings = get_settings()
@@ -16,13 +15,13 @@ _FINAL_DISPLAY_ROWS = 5
 
 def _fetch_leg(leg: RouteLeg) -> StationBoard:
     if leg.api_source == "transport_api":
-        return fetch_national_rail(
-            station_code=leg.origin_station_id,
-            calling_at=leg.destination_station_id,
+        return fetch_transport_for_leg(
+            origin_station_id=leg.origin_station_id,
+            destination_station_id=leg.destination_station_id,
         )
     if leg.api_source == "tfl":
-        return fetch_tfl(
-            station_id=leg.origin_station_id,
+        return fetch_tfl_for_leg(
+            origin_station_id=leg.origin_station_id,
             destination_station_id=leg.destination_station_id,
             max_results=_TFL_MAX_RESULTS,
         )

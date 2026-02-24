@@ -70,6 +70,14 @@ class Settings(BaseSettings):
     # TransportAPI free limits are strict; allow a much longer timeout window.
     transport_api_timeout_seconds: int = 3600
 
+    # Refresh cadence for TransportAPI-backed rows (seconds).
+    # We cache National Rail responses to avoid burning low daily quotas.
+    transport_api_refresh_seconds: int = 3600
+
+    # How many National Rail departures to prefetch each refresh cycle.
+    # UI still applies catchability filter and final 5-row cap.
+    transport_api_prefetch_departures: int = 40
+
     # How often to refresh data, in seconds.
     # Keep this reasonably low so East Putney eastbound services appear quickly.
     # 30s is a good balance between freshness and API usage.
