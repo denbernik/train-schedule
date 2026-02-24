@@ -43,7 +43,6 @@ from src.models import Departure, DepartureStatus, StationBoard, StationType
 logger = logging.getLogger(__name__)
 
 _BASE_URL = "https://transportapi.com/v3/uk/train/station"
-_TIMEOUT_SECONDS = 10
 
 
 def fetch_departures(
@@ -75,6 +74,7 @@ def fetch_departures(
             app_id=settings.transport_api_app_id,
             app_key=settings.transport_api_app_key,
             calling_at=calling_at,
+            timeout_seconds=settings.transport_api_timeout_seconds,
         )
         departures = _parse_departures(raw_response)
 
@@ -130,6 +130,7 @@ def _call_api(
     app_id: str,
     app_key: str,
     calling_at: str | None = None,
+    timeout_seconds: int = 3600,
 ) -> dict:
     """
     Make the HTTP request to TransportAPI's live departures endpoint.
@@ -149,7 +150,7 @@ def _call_api(
     if calling_at:
         params["calling_at"] = calling_at
 
-    response = requests.get(url, params=params, timeout=_TIMEOUT_SECONDS)
+    response = requests.get(url, params=params, timeout=timeout_seconds)
     response.raise_for_status()
 
     return response.json()

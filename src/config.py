@@ -63,6 +63,13 @@ class Settings(BaseSettings):
     # This controls "next N trains" for TfL legs.
     tfl_max_departures: int = 15
 
+    # --- HTTP timeouts ---
+    # Keep TfL relatively tight so the board remains responsive.
+    tfl_timeout_seconds: int = 30
+
+    # TransportAPI free limits are strict; allow a much longer timeout window.
+    transport_api_timeout_seconds: int = 3600
+
     # How often to refresh data, in seconds.
     # Keep this reasonably low so East Putney eastbound services appear quickly.
     # 30s is a good balance between freshness and API usage.

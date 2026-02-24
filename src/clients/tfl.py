@@ -30,11 +30,6 @@ logger = logging.getLogger(__name__)
 # TfL API base URL — no trailing slash
 _BASE_URL = "https://api.tfl.gov.uk"
 
-# Request timeout in seconds.
-# TfL typically responds in <500ms but we allow more for slow connections.
-# A departure board that hangs for 10+ seconds is worse than one showing
-# stale data, so we keep this relatively tight.
-_TIMEOUT_SECONDS = 10
 _topology_provider: TubeTopologyProvider | None = None
 _TIMETABLE_HORIZON_HOURS = 12
 _LIVE_TT_TOLERANCE_SECONDS = 60
@@ -69,9 +64,10 @@ def fetch_departures(
     settings = get_settings()
     station_id = station_id or settings.tfl_station_id
     max_results = max_results or getattr(settings, "tfl_max_departures", settings.max_departures)
+    timeout_seconds = settings.tfl_timeout_seconds
 
     try:
-        all_live_raw_arrivals = _call_api(station_id, settings.tfl_api_key)
+        all_live_raw_arrivals = _call_api(station_id, settings.tfl_api_key, timeout_seconds)
         live_raw_arrivals, filter_error = _filter_arrivals_for_destination(
             raw_arrivals=all_live_raw_arrivals,
             origin_station_id=station_id,
@@ -89,6 +85,7 @@ def fetch_departures(
                 origin_station_id=station_id,
                 live_raw_arrivals=all_live_raw_arrivals,
                 api_key=settings.tfl_api_key,
+                timeout_seconds=timeout_seconds,
             )
 
             if timetable_raw_arrivals:
@@ -136,7 +133,7 @@ def fetch_departures(
         return _error_board(station_id, "Unexpected data from TfL API")
 
 
-def _call_api(station_id: str, api_key: str) -> list[dict]:
+def _call_api(station_id: str, api_key: str, timeout_seconds: int) -> list[dict]:
     """
     Make the HTTP request to TfL's arrivals endpoint.
 
@@ -155,13 +152,19 @@ def _call_api(station_id: str, api_key: str) -> list[dict]:
     if api_key:
         params["app_key"] = api_key
 
-    response = requests.get(url, params=params, timeout=_TIMEOUT_SECONDS)
+    response = requests.get(url, params=params, timeout=timeout_seconds)
     response.raise_for_status()
 
     return response.json()
 
 
-def _call_timetable_api(line_id: str, stop_id: str, direction: str, api_key: str) -> dict:
+def _call_timetable_api(
+    line_id: str,
+    stop_id: str,
+    direction: str,
+    api_key: str,
+    timeout_seconds: int,
+) -> dict:
     """
     Request scheduled timetable data for a line/stop/direction.
 
@@ -173,7 +176,7 @@ def _call_timetable_api(line_id: str, stop_id: str, direction: str, api_key: str
     if api_key:
         params["app_key"] = api_key
 
-    response = requests.get(url, params=params, timeout=_TIMEOUT_SECONDS)
+    response = requests.get(url, params=params, timeout=timeout_seconds)
     response.raise_for_status()
     return response.json()
 
@@ -182,6 +185,7 @@ def _fetch_timetable_candidates(
     origin_station_id: str,
     live_raw_arrivals: list[dict],
     api_key: str,
+    timeout_seconds: int,
 ) -> list[dict]:
     """
     Build arrival-like timetable candidates from known journeys.
@@ -220,6 +224,7 @@ def _fetch_timetable_candidates(
                     stop_id=origin_station_id,
                     direction=direction,
                     api_key=api_key,
+                    timeout_seconds=timeout_seconds,
                 )
                 candidates.extend(
                     _parse_timetable_response_to_arrivals(
