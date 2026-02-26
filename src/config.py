@@ -50,6 +50,7 @@ class Settings(BaseSettings):
     # Register at https://developer.transportapi.com/ for credentials.
     transport_api_app_id: str = ""
     transport_api_app_key: str = ""
+    ldb_access_token: str = ""
 
     # Station code for Wandsworth Town — this is the CRS (Computer Reservation System) code.
     # Look up codes at https://www.nationalrail.co.uk/stations_destinations/default.aspx
@@ -69,6 +70,15 @@ class Settings(BaseSettings):
 
     # TransportAPI free limits are strict; allow a much longer timeout window.
     transport_api_timeout_seconds: int = 3600
+
+    # --- Rail Data Marketplace LDB API ---
+    ldb_base_url: str = "https://api1.raildata.org.uk/1010-live-departure-board-dep1_2"
+    ldb_api_version: str = "20220120"
+    ldb_timeout_seconds: int = 30
+    ldb_default_num_rows: int = 10
+    ldb_default_filter_type: str = "to"
+    ldb_default_time_offset: int = 0
+    ldb_default_time_window: int = 120
 
     # Refresh cadence for TransportAPI-backed rows (seconds).
     # We cache National Rail responses to avoid burning low daily quotas.
