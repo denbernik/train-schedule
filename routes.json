@@ -8,7 +8,7 @@
         "destination_station_id": "WAT",
         "destination_name": "London Waterloo",
         "transport_mode": "NATIONAL_RAIL",
-        "api_source": "transport_api"
+        "api_source": "national_rail"
       }
     ],
     "walking_time_minutes": 10

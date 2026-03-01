@@ -70,6 +70,7 @@ class Departure:
     platform: str | None = None
     operator: str | None = None        # e.g., "South Western Railway", "District"
     delay_minutes: int = 0
+    arrival_time: datetime | None = None
 
     @property
     def is_delayed(self) -> bool:
@@ -87,6 +88,26 @@ class Departure:
         Shows expected time in HH:MM format.
         """
         return self.expected_time.strftime("%H:%M")
+
+    @property
+    def display_arrival_time(self) -> str | None:
+        """HH:MM arrival at destination, or None when unavailable."""
+        if self.arrival_time is None:
+            return None
+        return self.arrival_time.strftime("%H:%M")
+
+    @property
+    def display_duration(self) -> str | None:
+        """Human-readable journey duration from departure to arrival."""
+        if self.arrival_time is None:
+            return None
+        total_minutes = int((self.arrival_time - self.expected_time).total_seconds() / 60)
+        if total_minutes < 0:
+            return None
+        hours, mins = divmod(total_minutes, 60)
+        if hours >= 1:
+            return f"{hours} h {mins} min" if mins else f"{hours} h"
+        return f"{mins} min"
 
     @property
     def minutes_until(self) -> int | None:

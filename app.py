@@ -4,7 +4,7 @@ import streamlit.components.v1 as components
 from src.config import get_settings
 from src.filters import filter_and_cap_departures
 from src.models import DepartureStatus, StationBoard
-from src.refresh import fetch_tfl_for_leg, fetch_transport_for_leg
+from src.refresh import fetch_national_rail_for_leg, fetch_tfl_for_leg
 from src.routes import RouteLeg, load_routes
 
 settings = get_settings()
@@ -14,8 +14,8 @@ _FINAL_DISPLAY_ROWS = 5
 
 
 def _fetch_leg(leg: RouteLeg) -> StationBoard:
-    if leg.api_source == "transport_api":
-        return fetch_transport_for_leg(
+    if leg.api_source in ("national_rail", "transport_api"):
+        return fetch_national_rail_for_leg(
             origin_station_id=leg.origin_station_id,
             destination_station_id=leg.destination_station_id,
         )
@@ -73,4 +73,9 @@ for col, route in zip(columns, routes):
                         if leg.api_source == "tfl" and dep.status == DepartureStatus.NO_REPORT
                         else ""
                     )
-                    st.write(f"{dep.display_time} → {dep.destination}{timetable_marker} {status}")
+                    if dep.display_arrival_time:
+                        duration_part = f" ({dep.display_duration})" if dep.display_duration else ""
+                        line = f"{dep.display_time} - {dep.display_arrival_time}{duration_part} → {dep.destination} {status}"
+                    else:
+                        line = f"{dep.display_time} → {dep.destination}{timetable_marker} {status}"
+                    st.write(line)

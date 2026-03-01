@@ -73,6 +73,7 @@ class Settings(BaseSettings):
 
     # --- Rail Data Marketplace LDB API ---
     ldb_base_url: str = "https://api1.raildata.org.uk/1010-live-departure-board-dep1_2"
+    ldb_with_details_base_url: str = ""
     ldb_api_version: str = "20220120"
     ldb_timeout_seconds: int = 30
     ldb_default_num_rows: int = 10
@@ -84,9 +85,14 @@ class Settings(BaseSettings):
     # We cache National Rail responses to avoid burning low daily quotas.
     transport_api_refresh_seconds: int = 3600
 
+    # Refresh cadence for National Rail board rows (seconds).
+    # LDB has better limits than TransportAPI; 30s keeps data fresh.
+    national_rail_refresh_seconds: int = 30
+
     # How many National Rail departures to prefetch each refresh cycle.
     # UI still applies catchability filter and final 5-row cap.
     transport_api_prefetch_departures: int = 40
+    national_rail_prefetch_departures: int = 40
 
     # How often to refresh data, in seconds.
     # Keep this reasonably low so East Putney eastbound services appear quickly.

@@ -1,40 +1,18 @@
-"""Rail Data Marketplace Live Departure Board API helpers."""
+"""Rail Data Marketplace Live Departure Board API client."""
 
 from __future__ import annotations
 
 from collections.abc import Sequence
+from datetime import date, datetime, timedelta
 import json
 import logging
-from pathlib import Path
-import time
 
 import requests
 
 from src.config import get_settings
+from src.models import Departure, DepartureStatus, StationBoard, StationType
 
 logger = logging.getLogger(__name__)
-_DEBUG_LOG_PATH = Path("/Users/denisbernikov/Desktop/Apps/train-schedule/.cursor/debug-c1b6ec.log")
-_DEBUG_SESSION_ID = "c1b6ec"
-
-
-def _debug_log(run_id: str, hypothesis_id: str, location: str, message: str, data: dict) -> None:
-    # region agent log
-    payload = {
-        "sessionId": _DEBUG_SESSION_ID,
-        "runId": run_id,
-        "hypothesisId": hypothesis_id,
-        "location": location,
-        "message": message,
-        "data": data,
-        "timestamp": int(time.time() * 1000),
-    }
-    try:
-        _DEBUG_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
-        with _DEBUG_LOG_PATH.open("a", encoding="utf-8") as handle:
-            handle.write(json.dumps(payload, ensure_ascii=True) + "\n")
-    except Exception:
-        pass
-    # endregion
 
 
 class LdbApiError(RuntimeError):
@@ -47,6 +25,53 @@ class LdbApiHttpError(LdbApiError):
     def __init__(self, status_code: int, message: str):
         super().__init__(message)
         self.status_code = status_code
+
+
+def fetch_departures(
+    crs: str,
+    *,
+    num_rows: int | None = None,
+    filter_crs: str | None = None,
+    filter_type: str | None = None,
+    time_offset: int | None = None,
+    time_window: int | None = None,
+) -> dict:
+    """Fetch and parse live departures for a CRS from LDB."""
+    settings = get_settings()
+    max_results = num_rows if num_rows is not None else settings.max_departures
+    call_kwargs = dict(
+        crs=crs,
+        num_rows=max_results,
+        filter_crs=filter_crs,
+        filter_type=filter_type,
+        time_offset=time_offset,
+        time_window=time_window,
+    )
+    try:
+        destination_crs: str | None = None
+        if filter_crs:
+            try:
+                payload = call_departure_board_with_details(**call_kwargs)
+                destination_crs = filter_crs
+            except LdbApiError:
+                logger.warning(
+                    "GetDepBoardWithDetails failed for %s; falling back to GetDepartureBoard",
+                    crs,
+                )
+                payload = call_departure_board(**call_kwargs)
+        else:
+            payload = call_departure_board(**call_kwargs)
+
+        departures = _parse_departures(payload, destination_crs=destination_crs)
+        departures.sort(key=lambda dep: dep.expected_time)
+        return StationBoard(
+            station_name=payload.get("locationName", crs),
+            station_type=StationType.NATIONAL_RAIL,
+            departures=departures[:max_results],
+        )
+    except LdbApiError as exc:
+        logger.error("LDB fetch failed for %s: %s", crs, exc)
+        return _error_board(crs, str(exc))
 
 
 def call_departure_board(
@@ -77,22 +102,6 @@ def call_departure_board(
     if filter_crs:
         params["filterCrs"] = filter_crs.upper()
 
-    # region agent log
-    _debug_log(
-        run_id="run1",
-        hypothesis_id="H1",
-        location="src/clients/ldb.py:request-build",
-        message="Prepared LDB request",
-        data={
-            "endpoint": url,
-            "crs": crs.upper(),
-            "filter_crs": filter_crs.upper() if filter_crs else None,
-            "params": params,
-            "token_len": len(token),
-        },
-    )
-    # endregion
-
     try:
         response = requests.get(
             url,
@@ -101,53 +110,12 @@ def call_departure_board(
             timeout=settings.ldb_timeout_seconds,
         )
     except requests.Timeout as exc:
-        # region agent log
-        _debug_log(
-            run_id="run1",
-            hypothesis_id="H4",
-            location="src/clients/ldb.py:requests-timeout",
-            message="LDB request timed out",
-            data={"endpoint": url, "timeout_seconds": settings.ldb_timeout_seconds},
-        )
-        # endregion
         raise LdbApiError("LDB request timed out") from exc
     except requests.RequestException as exc:
-        # region agent log
-        _debug_log(
-            run_id="run1",
-            hypothesis_id="H4",
-            location="src/clients/ldb.py:requests-exception",
-            message="LDB network exception",
-            data={"endpoint": url, "exception_type": exc.__class__.__name__},
-        )
-        # endregion
         raise LdbApiError("Unable to reach LDB API") from exc
-
-    # region agent log
-    _debug_log(
-        run_id="run1",
-        hypothesis_id="H2",
-        location="src/clients/ldb.py:response-received",
-        message="LDB response received",
-        data={
-            "status_code": response.status_code,
-            "content_type": response.headers.get("content-type"),
-            "body_prefix": response.text[:160].replace("\n", " "),
-        },
-    )
-    # endregion
 
     if response.status_code >= 400:
         body_snippet = response.text[:200].strip().replace("\n", " ")
-        # region agent log
-        _debug_log(
-            run_id="run1",
-            hypothesis_id="H3",
-            location="src/clients/ldb.py:http-error",
-            message="LDB non-2xx status",
-            data={"status_code": response.status_code, "body_snippet": body_snippet},
-        )
-        # endregion
         raise LdbApiHttpError(
             response.status_code,
             f"{_http_error_message(response.status_code)} | body={body_snippet}",
@@ -157,6 +125,60 @@ def call_departure_board(
         return response.json()
     except ValueError as exc:
         raise LdbApiError("LDB returned non-JSON response") from exc
+
+
+def call_departure_board_with_details(
+    crs: str,
+    *,
+    num_rows: int | None = None,
+    filter_crs: str | None = None,
+    filter_type: str | None = None,
+    time_offset: int | None = None,
+    time_window: int | None = None,
+) -> dict:
+    """Call GetDepBoardWithDetails and return parsed JSON payload."""
+    settings = get_settings()
+    token = settings.ldb_access_token.strip()
+    if not token:
+        raise LdbApiError("Missing LDB access token. Set LDB_ACCESS_TOKEN in .env")
+
+    base_url = settings.ldb_with_details_base_url.strip() or settings.ldb_base_url
+    url = (
+        f"{base_url.rstrip('/')}"
+        f"/LDBWS/api/{settings.ldb_api_version}/GetDepBoardWithDetails/{crs.upper()}"
+    )
+    params = {
+        "numRows": num_rows if num_rows is not None else settings.ldb_default_num_rows,
+        "filterType": filter_type or settings.ldb_default_filter_type,
+        "timeOffset": time_offset if time_offset is not None else settings.ldb_default_time_offset,
+        "timeWindow": time_window if time_window is not None else settings.ldb_default_time_window,
+    }
+    if filter_crs:
+        params["filterCrs"] = filter_crs.upper()
+
+    try:
+        response = requests.get(
+            url,
+            headers={"x-apikey": token, "User-Agent": ""},
+            params=params,
+            timeout=settings.ldb_timeout_seconds,
+        )
+    except requests.Timeout as exc:
+        raise LdbApiError("LDB with-details request timed out") from exc
+    except requests.RequestException as exc:
+        raise LdbApiError("Unable to reach LDB API (with-details)") from exc
+
+    if response.status_code >= 400:
+        body_snippet = response.text[:200].strip().replace("\n", " ")
+        raise LdbApiHttpError(
+            response.status_code,
+            f"{_http_error_message(response.status_code)} | body={body_snippet}",
+        )
+
+    try:
+        return response.json()
+    except ValueError as exc:
+        raise LdbApiError("LDB with-details returned non-JSON response") from exc
 
 
 def probe_departure_board(crs: str, *, filter_crs: str | None = None) -> dict:
@@ -170,19 +192,6 @@ def probe_departure_board(crs: str, *, filter_crs: str | None = None) -> dict:
         payload = call_departure_board(crs=crs, filter_crs=filter_crs)
         path, services = detect_service_rows(payload)
         first = services[0] if services else {}
-        # region agent log
-        _debug_log(
-            run_id="run1",
-            hypothesis_id="H5",
-            location="src/clients/ldb.py:probe-parse",
-            message="Parsed probe payload",
-            data={
-                "service_list_path": path,
-                "service_count": len(services),
-                "top_level_keys": sorted(payload.keys()) if isinstance(payload, dict) else [],
-            },
-        )
-        # endregion
         logger.info(
             "LDB probe: crs=%s status=200 services=%d path=%s",
             crs.upper(),
@@ -213,6 +222,136 @@ def probe_departure_board(crs: str, *, filter_crs: str | None = None) -> dict:
         return {"ok": False, "status_code": exc.status_code, "error": str(exc)}
     except LdbApiError as exc:
         return {"ok": False, "error": str(exc)}
+
+
+def _extract_arrival_time(
+    service: dict, destination_crs: str, today: date
+) -> datetime | None:
+    """Extract arrival time at destination_crs from subsequentCallingPoints."""
+    calling_points_raw = service.get("subsequentCallingPoints")
+    if not isinstance(calling_points_raw, list):
+        return None
+
+    target = destination_crs.upper()
+    points: list[dict] = []
+    for item in calling_points_raw:
+        if isinstance(item, list):
+            points.extend(p for p in item if isinstance(p, dict))
+        elif isinstance(item, dict):
+            inner = item.get("callingPoint")
+            if isinstance(inner, list):
+                points.extend(p for p in inner if isinstance(p, dict))
+
+    for point in points:
+        crs = point.get("crs", "")
+        if not isinstance(crs, str) or crs.upper() != target:
+            continue
+        for key in ("at", "et", "st"):
+            value = point.get(key)
+            if _is_time_value(value):
+                return _parse_time_value(value, today=today)
+        return None
+
+    return None
+
+
+def _parse_departures(
+    payload: dict, *, destination_crs: str | None = None
+) -> list[Departure]:
+    path, services = detect_service_rows(payload)
+    if path == "<not-found>":
+        return []
+
+    departures: list[Departure] = []
+    today = date.today()
+    for service in services:
+        try:
+            departures.append(
+                _parse_service(service, today=today, destination_crs=destination_crs)
+            )
+        except (KeyError, TypeError, ValueError) as exc:
+            logger.warning("Skipping malformed LDB service: %s", exc)
+    return departures
+
+
+def _parse_service(
+    service: dict, today: date, *, destination_crs: str | None = None
+) -> Departure:
+    scheduled_time = _parse_time_value(service["std"], today=today)
+
+    expected_raw = service.get("atd") or service.get("etd") or service["std"]
+    expected_time = (
+        _parse_time_value(expected_raw, today=today)
+        if _is_time_value(expected_raw)
+        else scheduled_time
+    )
+    delay_minutes = max(0, int((expected_time - scheduled_time).total_seconds() / 60))
+
+    destination = _destination_name(service)
+    status = _map_status(service=service, expected_raw=expected_raw, delay_minutes=delay_minutes)
+
+    arrival_time = None
+    if destination_crs:
+        arrival_time = _extract_arrival_time(service, destination_crs, today)
+
+    return Departure(
+        destination=destination,
+        scheduled_time=scheduled_time,
+        expected_time=expected_time,
+        status=status,
+        platform=service.get("platform"),
+        operator=service.get("operator"),
+        delay_minutes=delay_minutes,
+        arrival_time=arrival_time,
+    )
+
+
+def _destination_name(service: dict) -> str:
+    destination = service.get("destination")
+    if isinstance(destination, list):
+        names = [
+            item.get("locationName")
+            for item in destination
+            if isinstance(item, dict) and isinstance(item.get("locationName"), str)
+        ]
+        if names:
+            return " / ".join(names)
+    return "Unknown"
+
+
+def _map_status(service: dict, expected_raw: str, delay_minutes: int) -> DepartureStatus:
+    if service.get("isCancelled") is True:
+        return DepartureStatus.CANCELLED
+
+    text = str(expected_raw).strip().lower()
+    if "cancel" in text:
+        return DepartureStatus.CANCELLED
+    if text in {"on time", "starts here", "early"}:
+        return DepartureStatus.ON_TIME
+    if text in {"no report"}:
+        return DepartureStatus.NO_REPORT
+    if "delayed" in text or "late" in text:
+        return DepartureStatus.DELAYED
+    if _is_time_value(expected_raw):
+        return DepartureStatus.DELAYED if delay_minutes > 0 else DepartureStatus.ON_TIME
+    return DepartureStatus.NO_REPORT
+
+
+def _is_time_value(value: object) -> bool:
+    if not isinstance(value, str):
+        return False
+    parts = value.split(":")
+    if len(parts) != 2:
+        return False
+    return parts[0].isdigit() and parts[1].isdigit()
+
+
+def _parse_time_value(value: str, today: date) -> datetime:
+    hours, minutes = map(int, value.split(":"))
+    parsed = datetime(today.year, today.month, today.day, hours, minutes)
+    if (datetime.now() - parsed).total_seconds() > 6 * 3600:
+        parsed += timedelta(days=1)
+    return parsed
 
 
 def detect_service_rows(payload: dict) -> tuple[str, list[dict]]:
@@ -272,6 +411,15 @@ def _service_preview(service: dict) -> dict:
         "status",
     )
     return {key: service.get(key) for key in preview_keys if key in service}
+
+
+def _error_board(station_code: str, message: str) -> StationBoard:
+    return StationBoard(
+        station_name=station_code,
+        station_type=StationType.NATIONAL_RAIL,
+        departures=[],
+        error_message=message,
+    )
 
 
 if __name__ == "__main__":

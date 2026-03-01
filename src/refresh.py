@@ -5,18 +5,39 @@ from __future__ import annotations
 from collections.abc import Callable
 import time
 
+from src.clients.ldb import fetch_departures as fetch_ldb
 from src.clients.tfl import fetch_departures as fetch_tfl
-from src.clients.transport_api import fetch_departures as fetch_national_rail
+from src.clients.transport_api import fetch_departures as fetch_transport_api
 from src.config import get_settings
 from src.models import StationBoard
 
 
-def build_transport_cache_fetcher(
+def _fetch_ldb_for_leg(station_code: str, calling_at: str, max_results: int) -> StationBoard:
+    return fetch_ldb(
+        crs=station_code,
+        filter_crs=calling_at,
+        num_rows=max_results,
+    )
+
+
+def _fetch_transport_api_for_leg(
+    station_code: str, calling_at: str, max_results: int
+) -> StationBoard:
+    return fetch_transport_api(
+        station_code=station_code,
+        calling_at=calling_at,
+        max_results=max_results,
+    )
+
+
+def build_national_rail_cache_fetcher(
     ttl_seconds: int,
-    fetch_func: Callable[..., StationBoard] | None = None,
+    primary_fetch_func: Callable[..., StationBoard] | None = None,
+    fallback_fetch_func: Callable[..., StationBoard] | None = None,
 ):
-    """Build a cached TransportAPI fetch function with a configurable TTL."""
-    fetch_impl = fetch_func or fetch_national_rail
+    """Build a cached National Rail fetcher (LDB primary, TransportAPI fallback)."""
+    primary_fetch = primary_fetch_func or _fetch_ldb_for_leg
+    fallback_fetch = fallback_fetch_func or _fetch_transport_api_for_leg
     cache: dict[tuple[str, str, int], tuple[float, StationBoard]] = {}
 
     def _cached_fetch(
@@ -32,11 +53,19 @@ def build_transport_cache_fetcher(
             if now - fetched_at < ttl_seconds:
                 return board
 
-        board = fetch_impl(
+        board = primary_fetch(
             station_code=station_code,
             calling_at=calling_at,
             max_results=max_results,
         )
+        if board.has_error:
+            fallback_board = fallback_fetch(
+                station_code=station_code,
+                calling_at=calling_at,
+                max_results=max_results,
+            )
+            if not fallback_board.has_error:
+                board = fallback_board
         cache[key] = (now, board)
         return board
 
@@ -49,20 +78,28 @@ def build_transport_cache_fetcher(
 
 
 _settings = get_settings()
-fetch_transport_api_cached = build_transport_cache_fetcher(
-    ttl_seconds=_settings.transport_api_refresh_seconds
+fetch_national_rail_cached = build_national_rail_cache_fetcher(
+    ttl_seconds=_settings.national_rail_refresh_seconds
 )
 
 
-def fetch_transport_for_leg(origin_station_id: str, destination_station_id: str) -> StationBoard:
+def fetch_national_rail_for_leg(origin_station_id: str, destination_station_id: str) -> StationBoard:
     """
-    Fetch National Rail departures for a route leg using hourly cache policy.
+    Fetch National Rail departures for a route leg via LDB with TransportAPI fallback.
     """
     settings = get_settings()
-    return fetch_transport_api_cached(
+    return fetch_national_rail_cached(
         station_code=origin_station_id,
         calling_at=destination_station_id,
-        max_results=settings.transport_api_prefetch_departures,
+        max_results=settings.national_rail_prefetch_departures,
+    )
+
+
+def fetch_transport_for_leg(origin_station_id: str, destination_station_id: str) -> StationBoard:
+    """Backward-compatible alias for older api_source config."""
+    return fetch_national_rail_for_leg(
+        origin_station_id=origin_station_id,
+        destination_station_id=destination_station_id,
     )
 
 
