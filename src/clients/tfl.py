@@ -77,7 +77,26 @@ def fetch_departures(
         if filter_error:
             return _error_board(station_id, filter_error)
 
-        live_departures = _parse_arrivals(live_raw_arrivals)
+        # Build destination arrival lookup for arrival_time matching
+        destination_arrival_map: dict[tuple[str, str], datetime] = {}
+        timetable_journey_minutes: int | None = None
+        if destination_station_id:
+            destination_arrival_map = _build_destination_arrival_map(
+                destination_station_id=destination_station_id,
+                api_key=settings.tfl_api_key,
+                timeout_seconds=timeout_seconds,
+            )
+            timetable_journey_minutes = _fetch_timetable_journey_minutes(
+                origin_station_id=station_id,
+                destination_station_id=destination_station_id,
+                live_raw_arrivals=all_live_raw_arrivals,
+                api_key=settings.tfl_api_key,
+                timeout_seconds=timeout_seconds,
+            )
+
+        live_departures = _parse_arrivals(
+            live_raw_arrivals, destination_arrival_map, timetable_journey_minutes,
+        )
         timetable_departures: list[Departure] = []
 
         if destination_station_id and len(live_departures) < max_results:
@@ -97,7 +116,9 @@ def fetch_departures(
                 )
                 if timetable_filter_error:
                     return _error_board(station_id, timetable_filter_error)
-                timetable_departures = _parse_timetable_arrivals(timetable_raw_arrivals)
+                timetable_departures = _parse_timetable_arrivals(
+                    timetable_raw_arrivals, timetable_journey_minutes,
+                )
 
         departures = _merge_departures_live_first(
             live_departures=live_departures,
@@ -156,6 +177,153 @@ def _call_api(station_id: str, api_key: str, timeout_seconds: int) -> list[dict]
     response.raise_for_status()
 
     return response.json()
+
+
+def _build_destination_arrival_map(
+    destination_station_id: str,
+    api_key: str,
+    timeout_seconds: int,
+) -> dict[tuple[str, str], datetime]:
+    """
+    Fetch arrivals at the destination station and build a vehicleId lookup.
+
+    Returns a mapping of (vehicleId, lineId) -> expectedArrival datetime.
+    Both keys are lowercased for consistent matching.
+
+    If the API call fails, returns an empty dict — departures will simply
+    show no arrival time (same as current behavior).
+    """
+    try:
+        raw_arrivals = _call_api(destination_station_id, api_key, timeout_seconds)
+    except (requests.Timeout, requests.RequestException) as e:
+        logger.warning(
+            "TfL destination arrivals fetch failed for %s: %s",
+            destination_station_id,
+            e,
+        )
+        return {}
+
+    lookup: dict[tuple[str, str], datetime] = {}
+    for arrival in raw_arrivals:
+        vehicle_id = arrival.get("vehicleId")
+        line_id = arrival.get("lineId")
+        expected_arrival_raw = arrival.get("expectedArrival")
+
+        if not isinstance(vehicle_id, str) or not vehicle_id.strip():
+            continue
+        if not isinstance(line_id, str) or not line_id.strip():
+            continue
+        if not isinstance(expected_arrival_raw, str):
+            continue
+
+        try:
+            expected_arrival = datetime.fromisoformat(
+                expected_arrival_raw.replace("Z", "+00:00")
+            )
+        except (ValueError, TypeError):
+            continue
+
+        key = (vehicle_id.strip().lower(), line_id.strip().lower())
+        # If multiple predictions exist for same vehicle, keep the earliest.
+        if key not in lookup or expected_arrival < lookup[key]:
+            lookup[key] = expected_arrival
+
+    logger.debug(
+        "TfL destination arrival map for %s: %d entries",
+        destination_station_id,
+        len(lookup),
+    )
+    return lookup
+
+
+def _fetch_timetable_journey_minutes(
+    origin_station_id: str,
+    destination_station_id: str,
+    live_raw_arrivals: list[dict],
+    api_key: str,
+    timeout_seconds: int,
+) -> int | None:
+    """
+    Look up the scheduled journey time from origin to destination via stationIntervals.
+
+    The TfL timetable endpoint returns stationIntervals with timeToArrival
+    (minutes from origin) for each stop along the route. We find the destination
+    stop and return its timeToArrival value.
+
+    Returns minutes as an int, or None if unavailable.
+    """
+    line_ids = sorted(
+        {
+            item.get("lineId", "").strip().lower()
+            for item in live_raw_arrivals
+            if isinstance(item.get("lineId"), str) and item.get("modeName") == "tube"
+        }
+    )
+    if not line_ids:
+        return None
+
+    directions = sorted(
+        {
+            item.get("direction", "").strip().lower()
+            for item in live_raw_arrivals
+            if isinstance(item.get("direction"), str)
+        }
+    )
+    directions = [d for d in directions if d in ("inbound", "outbound")] or [
+        "outbound",
+        "inbound",
+    ]
+
+    dest_lower = destination_station_id.strip().lower()
+
+    for line_id in line_ids:
+        for direction in directions:
+            try:
+                payload = _call_timetable_api(
+                    line_id=line_id,
+                    stop_id=origin_station_id,
+                    direction=direction,
+                    api_key=api_key,
+                    timeout_seconds=timeout_seconds,
+                )
+            except (requests.RequestException, ValueError, TypeError) as e:
+                logger.warning(
+                    "TfL timetable journey time lookup failed for %s/%s: %s",
+                    line_id,
+                    direction,
+                    e,
+                )
+                continue
+
+            timetable = payload.get("timetable", {})
+            for route in timetable.get("routes", []):
+                if not isinstance(route, dict):
+                    continue
+                for si in route.get("stationIntervals", []):
+                    if not isinstance(si, dict):
+                        continue
+                    for interval in si.get("intervals", []):
+                        if not isinstance(interval, dict):
+                            continue
+                        stop_id = interval.get("stopId", "")
+                        if isinstance(stop_id, str) and stop_id.strip().lower() == dest_lower:
+                            time_val = interval.get("timeToArrival")
+                            if isinstance(time_val, (int, float)) and time_val > 0:
+                                minutes = int(time_val)
+                                logger.debug(
+                                    "TfL timetable journey time %s -> %s: %d min",
+                                    origin_station_id,
+                                    destination_station_id,
+                                    minutes,
+                                )
+                                return minutes
+
+    logger.warning(
+        "Could not determine TfL timetable journey time from %s to %s",
+        origin_station_id,
+        destination_station_id,
+    )
+    return None
 
 
 def _call_timetable_api(
@@ -490,7 +658,11 @@ def _filter_arrivals_for_destination(
     return filtered, None
 
 
-def _parse_arrivals(raw_arrivals: list[dict]) -> list[Departure]:
+def _parse_arrivals(
+    raw_arrivals: list[dict],
+    destination_arrival_map: dict[tuple[str, str], datetime] | None = None,
+    timetable_journey_minutes: int | None = None,
+) -> list[Departure]:
     """
     Transform raw TfL API predictions into our Departure model.
 
@@ -500,9 +672,10 @@ def _parse_arrivals(raw_arrivals: list[dict]) -> list[Departure]:
     - timeToStation: seconds until arrival (integer)
     - platformName: e.g., "Eastbound - Platform 1"
     - lineName: e.g., "District"
+    - vehicleId: used to match arrival predictions at the destination station
 
     Fields we ignore (for now):
-    - vehicleId, naptanId, bearing, direction — useful for a map view later
+    - naptanId, bearing, direction — useful for a map view later
     - modeName — we already know this is TfL
     - towards — similar to destinationName but less precise
 
@@ -515,7 +688,9 @@ def _parse_arrivals(raw_arrivals: list[dict]) -> list[Departure]:
 
     for arrival in raw_arrivals:
         try:
-            departure = _parse_single_arrival(arrival)
+            departure = _parse_single_arrival(
+                arrival, destination_arrival_map, timetable_journey_minutes,
+            )
             departures.append(departure)
         except (KeyError, ValueError, TypeError) as e:
             logger.warning(
@@ -528,11 +703,16 @@ def _parse_arrivals(raw_arrivals: list[dict]) -> list[Departure]:
     return departures
 
 
-def _parse_timetable_arrivals(raw_arrivals: list[dict]) -> list[Departure]:
+def _parse_timetable_arrivals(
+    raw_arrivals: list[dict],
+    timetable_journey_minutes: int | None = None,
+) -> list[Departure]:
     """
     Parse timetable-derived rows into Departure objects.
 
     Timetable rows are scheduled estimates, so status is NO_REPORT and delay=0.
+    When timetable_journey_minutes is provided, sets arrival_time using
+    the TfL-published journey duration from stationIntervals.
     """
     departures: list[Departure] = []
     for arrival in raw_arrivals:
@@ -540,6 +720,9 @@ def _parse_timetable_arrivals(raw_arrivals: list[dict]) -> list[Departure]:
             expected_time = datetime.fromisoformat(
                 str(arrival["expectedArrival"]).replace("Z", "+00:00")
             )
+            arrival_time: datetime | None = None
+            if timetable_journey_minutes is not None:
+                arrival_time = expected_time + timedelta(minutes=timetable_journey_minutes)
             departures.append(
                 Departure(
                     destination=arrival.get("destinationName", "Unknown"),
@@ -549,6 +732,7 @@ def _parse_timetable_arrivals(raw_arrivals: list[dict]) -> list[Departure]:
                     platform=arrival.get("platformName"),
                     operator=arrival.get("lineName"),
                     delay_minutes=0,
+                    arrival_time=arrival_time,
                 )
             )
         except (KeyError, ValueError, TypeError) as e:
@@ -562,13 +746,21 @@ def _parse_timetable_arrivals(raw_arrivals: list[dict]) -> list[Departure]:
     return departures
 
 
-def _parse_single_arrival(arrival: dict) -> Departure:
+def _parse_single_arrival(
+    arrival: dict,
+    destination_arrival_map: dict[tuple[str, str], datetime] | None = None,
+    timetable_journey_minutes: int | None = None,
+) -> Departure:
     """
     Parse one TfL prediction dict into a Departure.
 
     The expectedArrival field is an ISO 8601 datetime string.
     TfL returns these in UTC (Z suffix). We parse and keep as-is.
     For display, we'll format to local time in the display layer.
+
+    Arrival time resolution priority:
+    1. vehicleId match from destination_arrival_map (real-time)
+    2. timetable_journey_minutes offset from TfL stationIntervals (scheduled)
 
     Note: TfL predictions don't have a concept of "delayed" vs "on time"
     in the same way National Rail does. The prediction is always the
@@ -579,6 +771,22 @@ def _parse_single_arrival(arrival: dict) -> Departure:
         arrival["expectedArrival"].replace("Z", "+00:00")
     )
 
+    # Look up arrival time at destination via vehicleId matching
+    arrival_time: datetime | None = None
+    if destination_arrival_map:
+        vehicle_id = arrival.get("vehicleId")
+        line_id = arrival.get("lineId")
+        if isinstance(vehicle_id, str) and isinstance(line_id, str):
+            key = (vehicle_id.strip().lower(), line_id.strip().lower())
+            arrival_time = destination_arrival_map.get(key)
+            # Sanity check: arrival at destination must be after departure from origin
+            if arrival_time is not None and arrival_time <= expected_arrival:
+                arrival_time = None
+
+    # Fall back to timetable journey offset when vehicleId match unavailable
+    if arrival_time is None and timetable_journey_minutes is not None:
+        arrival_time = expected_arrival + timedelta(minutes=timetable_journey_minutes)
+
     return Departure(
         destination=arrival["destinationName"],
         scheduled_time=expected_arrival,  # TfL doesn't separate scheduled vs expected
@@ -587,6 +795,7 @@ def _parse_single_arrival(arrival: dict) -> Departure:
         platform=arrival.get("platformName"),
         operator=arrival.get("lineName"),  # e.g., "District"
         delay_minutes=0,  # TfL predictions are always "current best estimate"
+        arrival_time=arrival_time,
     )
 
 
