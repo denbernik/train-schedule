@@ -79,7 +79,7 @@ class Settings(BaseSettings):
     ldb_default_num_rows: int = 10
     ldb_default_filter_type: str = "to"
     ldb_default_time_offset: int = 0
-    ldb_default_time_window: int = 120
+    ldb_default_time_window: int = 480
 
     # Refresh cadence for TransportAPI-backed rows (seconds).
     # We cache National Rail responses to avoid burning low daily quotas.

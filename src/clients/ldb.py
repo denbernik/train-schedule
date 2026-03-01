@@ -255,6 +255,27 @@ def _extract_arrival_time(
     return None
 
 
+def _has_destination_in_calling_points(service: dict, destination_crs: str) -> bool:
+    """Check whether destination_crs appears in subsequentCallingPoints."""
+    calling_points_raw = service.get("subsequentCallingPoints")
+    if not isinstance(calling_points_raw, list):
+        return False
+
+    target = destination_crs.upper()
+    for item in calling_points_raw:
+        if isinstance(item, list):
+            for p in item:
+                if isinstance(p, dict) and isinstance(p.get("crs"), str) and p["crs"].upper() == target:
+                    return True
+        elif isinstance(item, dict):
+            inner = item.get("callingPoint")
+            if isinstance(inner, list):
+                for p in inner:
+                    if isinstance(p, dict) and isinstance(p.get("crs"), str) and p["crs"].upper() == target:
+                        return True
+    return False
+
+
 def _parse_departures(
     payload: dict, *, destination_crs: str | None = None
 ) -> list[Departure]:
@@ -265,6 +286,13 @@ def _parse_departures(
     departures: list[Departure] = []
     today = date.today()
     for service in services:
+        if destination_crs and not _has_destination_in_calling_points(service, destination_crs):
+            logger.debug(
+                "Skipping service %s: %s not in subsequentCallingPoints",
+                service.get("std", "?"),
+                destination_crs,
+            )
+            continue
         try:
             departures.append(
                 _parse_service(service, today=today, destination_crs=destination_crs)
