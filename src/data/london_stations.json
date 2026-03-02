@@ -1,0 +1,3290 @@
+[
+  {
+    "id": "940GZZDLABR",
+    "name": "Abbey Road",
+    "mode": "dlr",
+    "network": "tfl"
+  },
+  {
+    "id": "910GABWDXR",
+    "name": "Abbey Wood",
+    "mode": "elizabeth-line",
+    "network": "tfl"
+  },
+  {
+    "id": "ABW",
+    "name": "Abbey Wood",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "910GACTNCTL",
+    "name": "Acton Central",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "ACT",
+    "name": "Acton Central",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "910GACTONML",
+    "name": "Acton Main Line",
+    "mode": "elizabeth-line",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUACT",
+    "name": "Acton Town",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUALD",
+    "name": "Aldgate",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUADE",
+    "name": "Aldgate East",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZDLALL",
+    "name": "All Saints",
+    "mode": "dlr",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUALP",
+    "name": "Alperton",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUAMS",
+    "name": "Amersham",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GANERLEY",
+    "name": "Anerley",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUAGL",
+    "name": "Angel",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUACY",
+    "name": "Archway",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUASG",
+    "name": "Arnos Grove",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUASL",
+    "name": "Arsenal",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "AHD",
+    "name": "Ashtead",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "940GZZLUBST",
+    "name": "Baker Street",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUBLM",
+    "name": "Balham",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "BAL",
+    "name": "Balham",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "940GZZLUBNK",
+    "name": "Bank",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZDLBNK",
+    "name": "Bank",
+    "mode": "dlr",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUBBN",
+    "name": "Barbican",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUBKG",
+    "name": "Barking",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GBARKING",
+    "name": "Barking",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUBKE",
+    "name": "Barkingside",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUBSC",
+    "name": "Barons Court",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZBPSUST",
+    "name": "Battersea Power Station",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "BAT",
+    "name": "Battersea Power Station",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "940GZZLUBWT",
+    "name": "Bayswater",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZDLBEC",
+    "name": "Beckton",
+    "mode": "dlr",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZDLBPK",
+    "name": "Beckton Park",
+    "mode": "dlr",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUBEC",
+    "name": "Becontree",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUBZP",
+    "name": "Belsize Park",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUBMY",
+    "name": "Bermondsey",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUBLG",
+    "name": "Bethnal Green",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GBTHNLGR",
+    "name": "Bethnal Green",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "BKJ",
+    "name": "Birkbeck",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "940GZZLUBKF",
+    "name": "Blackfriars",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "BKH",
+    "name": "Blackheath",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "940GZZLUBLR",
+    "name": "Blackhorse Road",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GBLCHSRD",
+    "name": "Blackhorse Road",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZDLBLA",
+    "name": "Blackwall",
+    "mode": "dlr",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUBND",
+    "name": "Bond Street",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GBONDST",
+    "name": "Bond Street",
+    "mode": "elizabeth-line",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUBOR",
+    "name": "Borough",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUBOS",
+    "name": "Boston Manor",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUBDS",
+    "name": "Bounds Green",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "BMH",
+    "name": "Bournemouth",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "940GZZDLBOW",
+    "name": "Bow Church",
+    "mode": "dlr",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUBWR",
+    "name": "Bow Road",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUBTX",
+    "name": "Brent Cross",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GBRTWOOD",
+    "name": "Brentwood",
+    "mode": "elizabeth-line",
+    "network": "tfl"
+  },
+  {
+    "id": "BTN",
+    "name": "Brighton",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "940GZZLUBXN",
+    "name": "Brixton",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "BRX",
+    "name": "Brixton",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "910GBROCKLY",
+    "name": "Brockley",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUBBB",
+    "name": "Bromley-by-Bow",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GBRBY",
+    "name": "Brondesbury",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "910GBRBYPK",
+    "name": "Brondesbury Park",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "910GBRUCGRV",
+    "name": "Bruce Grove",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUBKH",
+    "name": "Buckhurst Hill",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GBNHAM",
+    "name": "Burnham (Berks)",
+    "mode": "elizabeth-line",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUBTK",
+    "name": "Burnt Oak",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GBHILLPK",
+    "name": "Bush Hill Park",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "910GBUSHYDC",
+    "name": "Bushey",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUCAR",
+    "name": "Caledonian Road",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GCLDNNRB",
+    "name": "Caledonian Road & Barnsbury",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "910GCAMHTH",
+    "name": "Cambridge Heath (London)",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "910GCMDNRD",
+    "name": "Camden Road",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUCTN",
+    "name": "Camden Town",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUCWR",
+    "name": "Canada Water",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GCNDAW",
+    "name": "Canada Water",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUCYF",
+    "name": "Canary Wharf",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GCANWHRF",
+    "name": "Canary Wharf",
+    "mode": "elizabeth-line",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZDLCAN",
+    "name": "Canary Wharf",
+    "mode": "dlr",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUCGT",
+    "name": "Canning Town",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZDLCGT",
+    "name": "Canning Town",
+    "mode": "dlr",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUCST",
+    "name": "Cannon Street",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GCNNB",
+    "name": "Canonbury",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUCPK",
+    "name": "Canons Park",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GCRPNDPK",
+    "name": "Carpenders Park",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "CAT",
+    "name": "Caterham",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "910GCHDWLHT",
+    "name": "Chadwell Heath",
+    "mode": "elizabeth-line",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUCAL",
+    "name": "Chalfont & Latimer",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUCFM",
+    "name": "Chalk Farm",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUCHL",
+    "name": "Chancery Lane",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUCHX",
+    "name": "Charing Cross",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUCSM",
+    "name": "Chesham",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GCHESHNT",
+    "name": "Cheshunt",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "CWU",
+    "name": "Chessington South",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "940GZZLUCWL",
+    "name": "Chigwell",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GCHINGFD",
+    "name": "Chingford",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUCWP",
+    "name": "Chiswick Park",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUCYD",
+    "name": "Chorleywood",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "CTK",
+    "name": "City Thameslink",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "940GZZLUCPC",
+    "name": "Clapham Common",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GCLPHHS",
+    "name": "Clapham High Street",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "910GCLPHMJ1",
+    "name": "Clapham Junction",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "910GCLPHMJC",
+    "name": "Clapham Junction",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "CLJ",
+    "name": "Clapham Junction",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "940GZZLUCPN",
+    "name": "Clapham North",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "CTN",
+    "name": "Clapham North",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "940GZZLUCPS",
+    "name": "Clapham South",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GCLAPTON",
+    "name": "Clapton",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "CBH",
+    "name": "Cobham & Stoke D'Abernon",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "940GZZLUCKS",
+    "name": "Cockfosters",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUCND",
+    "name": "Colindale",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUCSD",
+    "name": "Colliers Wood",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUCGN",
+    "name": "Covent Garden",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZDLCLA",
+    "name": "Crossharbour",
+    "mode": "dlr",
+    "network": "tfl"
+  },
+  {
+    "id": "910GCROUCHH",
+    "name": "Crouch Hill",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUCXY",
+    "name": "Croxley",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GCRYSTLP",
+    "name": "Crystal Palace",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZDLCUS",
+    "name": "Custom House (for ExCel)",
+    "mode": "dlr",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZDLCUT",
+    "name": "Cutty Sark (for Maritime Greenwich)",
+    "mode": "dlr",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZDLCYP",
+    "name": "Cyprus",
+    "mode": "dlr",
+    "network": "tfl"
+  },
+  {
+    "id": "DAG",
+    "name": "Dagenham Dock",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "940GZZLUDGE",
+    "name": "Dagenham East",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUDGY",
+    "name": "Dagenham Heathway",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GDALS",
+    "name": "Dalston Junction",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "910GDALSKLD",
+    "name": "Dalston Kingsland",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUDBN",
+    "name": "Debden",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GDENMRKH",
+    "name": "Denmark Hill",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "DFD",
+    "name": "Deptford",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "940GZZDLDEP",
+    "name": "Deptford Bridge",
+    "mode": "dlr",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZDLDEV",
+    "name": "Devons Road",
+    "mode": "dlr",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUDOH",
+    "name": "Dollis Hill",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUEBY",
+    "name": "Ealing Broadway",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GEALINGB",
+    "name": "Ealing Broadway",
+    "mode": "elizabeth-line",
+    "network": "tfl"
+  },
+  {
+    "id": "EAL",
+    "name": "Ealing Broadway",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "940GZZLUECM",
+    "name": "Ealing Common",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUECT",
+    "name": "Earl's Court",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "EAD",
+    "name": "Earlsfield",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "940GZZLUEAN",
+    "name": "East Acton",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUEFY",
+    "name": "East Finchley",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUEHM",
+    "name": "East Ham",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZDLEIN",
+    "name": "East India",
+    "mode": "dlr",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUEPY",
+    "name": "East Putney",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "EWE",
+    "name": "East Worthing",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "940GZZLUEAE",
+    "name": "Eastcote",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUEGW",
+    "name": "Edgware",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUERB",
+    "name": "Edgware Road (Bakerloo)",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUERC",
+    "name": "Edgware Road (Circle Line)",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GEDMNGRN",
+    "name": "Edmonton Green",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUEAC",
+    "name": "Elephant & Castle",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "ELP",
+    "name": "Elephant & Castle",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "940GZZLUEPK",
+    "name": "Elm Park",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "ELD",
+    "name": "Elmers End",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "940GZZDLELV",
+    "name": "Elverson Road",
+    "mode": "dlr",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUEMB",
+    "name": "Embankment",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GEMRSPKH",
+    "name": "Emerson Park",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "910GENFLDTN",
+    "name": "Enfield Town",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUEPG",
+    "name": "Epping",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "EPS",
+    "name": "Epsom",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "940GZZLUEUS",
+    "name": "Euston",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUESQ",
+    "name": "Euston Square",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUFLP",
+    "name": "Fairlop",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUFCN",
+    "name": "Farringdon",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GFRNDXR",
+    "name": "Farringdon",
+    "mode": "elizabeth-line",
+    "network": "tfl"
+  },
+  {
+    "id": "FLT",
+    "name": "Feltham",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "940GZZLUFYC",
+    "name": "Finchley Central",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUFYR",
+    "name": "Finchley Road",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GFNCHLYR",
+    "name": "Finchley Road & Frognal",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUFPK",
+    "name": "Finsbury Park",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "FPK",
+    "name": "Finsbury Park",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "910GFRSTGT",
+    "name": "Forest Gate",
+    "mode": "elizabeth-line",
+    "network": "tfl"
+  },
+  {
+    "id": "910GFORESTH",
+    "name": "Forest Hill",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUFBY",
+    "name": "Fulham Broadway",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZDLGAL",
+    "name": "Gallions Reach",
+    "mode": "dlr",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUGTH",
+    "name": "Gants Hill",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GGIDEAPK",
+    "name": "Gidea Park",
+    "mode": "elizabeth-line",
+    "network": "tfl"
+  },
+  {
+    "id": "GPO",
+    "name": "Gipsy Hill",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "940GZZLUGTR",
+    "name": "Gloucester Road",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUGGN",
+    "name": "Golders Green",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUGHK",
+    "name": "Goldhawk Road",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUGDG",
+    "name": "Goodge Street",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GGODMAYS",
+    "name": "Goodmayes",
+    "mode": "elizabeth-line",
+    "network": "tfl"
+  },
+  {
+    "id": "910GGOSPLOK",
+    "name": "Gospel Oak",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUGGH",
+    "name": "Grange Hill",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUGPS",
+    "name": "Great Portland Street",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUGPK",
+    "name": "Green Park",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUGFD",
+    "name": "Greenford",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZDLGRE",
+    "name": "Greenwich",
+    "mode": "dlr",
+    "network": "tfl"
+  },
+  {
+    "id": "GNH",
+    "name": "Greenwich",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "940GZZLUGBY",
+    "name": "Gunnersbury",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GGNRSBRY",
+    "name": "Gunnersbury",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "910GHACKNYC",
+    "name": "Hackney Central",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "910GHAKNYNM",
+    "name": "Hackney Downs",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "910GHACKNYW",
+    "name": "Hackney Wick",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "910GHAGGERS",
+    "name": "Haggerston",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUHLT",
+    "name": "Hainault",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "HHB",
+    "name": "Hammersmith",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "940GZZLUHSD",
+    "name": "Hammersmith (Dist&Picc Line)",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUHSC",
+    "name": "Hammersmith (H&C Line)",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUHTD",
+    "name": "Hampstead",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GHMPSTDH",
+    "name": "Hampstead Heath",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "HMC",
+    "name": "Hampton Court",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "940GZZLUHGR",
+    "name": "Hanger Lane",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GHANWELL",
+    "name": "Hanwell",
+    "mode": "elizabeth-line",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUHSN",
+    "name": "Harlesden",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GHARLSDN",
+    "name": "Harlesden",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "910GHRLDWOD",
+    "name": "Harold Wood",
+    "mode": "elizabeth-line",
+    "network": "tfl"
+  },
+  {
+    "id": "910GHRGYGL",
+    "name": "Harringay Green Lanes",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUHAW",
+    "name": "Harrow & Wealdstone",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GHROW",
+    "name": "Harrow & Wealdstone",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUHOH",
+    "name": "Harrow-on-the-Hill",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "HWW",
+    "name": "Harrow-on-the-Hill",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "910GHTCHEND",
+    "name": "Hatch End",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUHNX",
+    "name": "Hatton Cross",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GHAYESAH",
+    "name": "Hayes & Harlington",
+    "mode": "elizabeth-line",
+    "network": "tfl"
+  },
+  {
+    "id": "910GHEDSTNL",
+    "name": "Headstone Lane",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUHR4",
+    "name": "Heathrow Terminal 4",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GHTRWTM4",
+    "name": "Heathrow Terminal 4",
+    "mode": "elizabeth-line",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUHR5",
+    "name": "Heathrow Terminal 5",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GHTRWTM5",
+    "name": "Heathrow Terminal 5",
+    "mode": "elizabeth-line",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUHRC",
+    "name": "Heathrow Terminals 2 & 3",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GHTRWAPT",
+    "name": "Heathrow Terminals 2 & 3",
+    "mode": "elizabeth-line",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUHCL",
+    "name": "Hendon Central",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "HTN",
+    "name": "Herne Bay",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "HNH",
+    "name": "Herne Hill",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "940GZZDLHEQ",
+    "name": "Heron Quays",
+    "mode": "dlr",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUHBT",
+    "name": "High Barnet",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUHSK",
+    "name": "High Street Kensington",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GHGHMSPK",
+    "name": "Highams Park",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUHAI",
+    "name": "Highbury & Islington",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GHGHI",
+    "name": "Highbury & Islington",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUHGT",
+    "name": "Highgate",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUHGD",
+    "name": "Hillingdon",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUHBN",
+    "name": "Holborn",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUHPK",
+    "name": "Holland Park",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUHWY",
+    "name": "Holloway Road",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GHOMRTON",
+    "name": "Homerton",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "910GHONROPK",
+    "name": "Honor Oak Park",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "HOP",
+    "name": "Honor Oak Park",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "940GZZLUHCH",
+    "name": "Hornchurch",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "HOW",
+    "name": "Horwich Parkway",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "940GZZLUHWC",
+    "name": "Hounslow Central",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUHWE",
+    "name": "Hounslow East",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUHWT",
+    "name": "Hounslow West",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GHOXTON",
+    "name": "Hoxton",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUHPC",
+    "name": "Hyde Park Corner",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUICK",
+    "name": "Ickenham",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GILFORD",
+    "name": "Ilford",
+    "mode": "elizabeth-line",
+    "network": "tfl"
+  },
+  {
+    "id": "910GCSEAH",
+    "name": "Imperial Wharf",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZDLISL",
+    "name": "Island Gardens",
+    "mode": "dlr",
+    "network": "tfl"
+  },
+  {
+    "id": "910GIVER",
+    "name": "Iver",
+    "mode": "elizabeth-line",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUKNG",
+    "name": "Kennington",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUKSL",
+    "name": "Kensal Green",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GKENSLG",
+    "name": "Kensal Green",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "910GKENR",
+    "name": "Kensal Rise",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUKOY",
+    "name": "Kensington (Olympia)",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GKENOLYM",
+    "name": "Kensington (Olympia)",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUKSH",
+    "name": "Kentish Town",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GKNTSHTW",
+    "name": "Kentish Town West",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUKEN",
+    "name": "Kenton",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GKTON",
+    "name": "Kenton",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUKWG",
+    "name": "Kew Gardens",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GKEWGRDN",
+    "name": "Kew Gardens",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUKBN",
+    "name": "Kilburn",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GKLBRNHR",
+    "name": "Kilburn High Road",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUKPK",
+    "name": "Kilburn Park",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZDLKGV",
+    "name": "King George V",
+    "mode": "dlr",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUKSX",
+    "name": "King's Cross St. Pancras",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUKBY",
+    "name": "Kingsbury",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "KNG",
+    "name": "Kingston",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "940GZZLUKNB",
+    "name": "Knightsbridge",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLULAD",
+    "name": "Ladbroke Grove",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLULBN",
+    "name": "Lambeth North",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLULGT",
+    "name": "Lancaster Gate",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZDLLDP",
+    "name": "Langdon Park",
+    "mode": "dlr",
+    "network": "tfl"
+  },
+  {
+    "id": "910GLANGLEY",
+    "name": "Langley (Berks)",
+    "mode": "elizabeth-line",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLULRD",
+    "name": "Latimer Road",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "LHD",
+    "name": "Leatherhead",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "940GZZLULSQ",
+    "name": "Leicester Square",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZDLLEW",
+    "name": "Lewisham",
+    "mode": "dlr",
+    "network": "tfl"
+  },
+  {
+    "id": "LEW",
+    "name": "Lewisham",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "940GZZLULYN",
+    "name": "Leyton",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GLEYTNMR",
+    "name": "Leyton Midland Road",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLULYS",
+    "name": "Leytonstone",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GLYTNSHR",
+    "name": "Leytonstone High Road",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZDLLIM",
+    "name": "Limehouse",
+    "mode": "dlr",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLULVT",
+    "name": "Liverpool Street",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GLIVSTLL",
+    "name": "Liverpool Street",
+    "mode": "elizabeth-line",
+    "network": "tfl"
+  },
+  {
+    "id": "BFR",
+    "name": "London Blackfriars",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "940GZZLULNB",
+    "name": "London Bridge",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GLNDNBDC",
+    "name": "London Bridge",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "LBG",
+    "name": "London Bridge",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "CST",
+    "name": "London Cannon Street",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "CHX",
+    "name": "London Charing Cross",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "940GZZDLLCA",
+    "name": "London City Airport",
+    "mode": "dlr",
+    "network": "tfl"
+  },
+  {
+    "id": "910GEUSTON",
+    "name": "London Euston",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "EUS",
+    "name": "London Euston",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "FST",
+    "name": "London Fenchurch Street",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "910GLONFLDS",
+    "name": "London Fields",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "GTW",
+    "name": "London Gatwick Airport",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "LGW",
+    "name": "London Gatwick Airport",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "KGX",
+    "name": "London King's Cross",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "910GLIVST",
+    "name": "London Liverpool Street",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "LST",
+    "name": "London Liverpool Street",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "MYB",
+    "name": "London Marylebone",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "910GPADTON",
+    "name": "London Paddington",
+    "mode": "elizabeth-line",
+    "network": "tfl"
+  },
+  {
+    "id": "PAD",
+    "name": "London Paddington",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "STP",
+    "name": "London St Pancras International",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "LVC",
+    "name": "London Victoria",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "VIC",
+    "name": "London Victoria",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "WAT",
+    "name": "London Waterloo",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "LMO",
+    "name": "Loughborough Junction",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "940GZZLULGN",
+    "name": "Loughton",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUMVL",
+    "name": "Maida Vale",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GMDNHEAD",
+    "name": "Maidenhead",
+    "mode": "elizabeth-line",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUMRH",
+    "name": "Manor House",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GMANRPK",
+    "name": "Manor Park",
+    "mode": "elizabeth-line",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUMSH",
+    "name": "Mansion House",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUMBA",
+    "name": "Marble Arch",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GMRYLAND",
+    "name": "Maryland",
+    "mode": "elizabeth-line",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUMYB",
+    "name": "Marylebone",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUMED",
+    "name": "Mile End",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUMHL",
+    "name": "Mill Hill East",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "MTC",
+    "name": "Mitcham Junction",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "940GZZLUMMT",
+    "name": "Monument",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUMPK",
+    "name": "Moor Park",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUMGT",
+    "name": "Moorgate",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUMDN",
+    "name": "Morden",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUMTC",
+    "name": "Mornington Crescent",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZDLMUD",
+    "name": "Mudchute",
+    "mode": "dlr",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUNDN",
+    "name": "Neasden",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "NWX",
+    "name": "New Cross",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "910GNWCRELL",
+    "name": "New Cross ELL",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "910GNEWXGTE",
+    "name": "New Cross Gate",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "NYM",
+    "name": "New Cross Gate",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "NEW",
+    "name": "New Eltham",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "NRB",
+    "name": "New Eltham",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "940GZZLUNBP",
+    "name": "Newbury Park",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZNEUGST",
+    "name": "Nine Elms",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUNAN",
+    "name": "North Acton",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUNEN",
+    "name": "North Ealing",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUNGW",
+    "name": "North Greenwich",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUNHA",
+    "name": "North Harrow",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUNWY",
+    "name": "North Wembley",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GNWEMBLY",
+    "name": "North Wembley",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUNFD",
+    "name": "Northfields",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUNHT",
+    "name": "Northolt",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUNKP",
+    "name": "Northwick Park",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUNOW",
+    "name": "Northwood",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUNWH",
+    "name": "Northwood Hills",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GNORWDJ",
+    "name": "Norwood Junction",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "NOR",
+    "name": "Norwood Junction",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "940GZZLUNHG",
+    "name": "Notting Hill Gate",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUOAK",
+    "name": "Oakwood",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUODS",
+    "name": "Old Street",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUOSY",
+    "name": "Osterley",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUOVL",
+    "name": "Oval",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUOXC",
+    "name": "Oxford Circus",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUPAC",
+    "name": "Paddington",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GPADTLL",
+    "name": "Paddington",
+    "mode": "elizabeth-line",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUPAH",
+    "name": "Paddington (H&C Line)-Underground",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUPKR",
+    "name": "Park Royal",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUPSG",
+    "name": "Parsons Green",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GPCKHMRY",
+    "name": "Peckham Rye",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "910GPENEW",
+    "name": "Penge West",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUPVL",
+    "name": "Perivale",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "PET",
+    "name": "Peterborough",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "940GZZLUPCC",
+    "name": "Piccadilly Circus",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUPCO",
+    "name": "Pimlico",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUPNR",
+    "name": "Pinner",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUPLW",
+    "name": "Plaistow",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZDLPDK",
+    "name": "Pontoon Dock",
+    "mode": "dlr",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZDLPOP",
+    "name": "Poplar",
+    "mode": "dlr",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUPRD",
+    "name": "Preston Road",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZDLPRE",
+    "name": "Prince Regent",
+    "mode": "dlr",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZDLPUD",
+    "name": "Pudding Mill Lane",
+    "mode": "dlr",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUPYB",
+    "name": "Putney Bridge",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUQPS",
+    "name": "Queen's Park",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GQPRK",
+    "name": "Queens Park (London)",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "910GPCKHMQD",
+    "name": "Queens Road Peckham",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "QRP",
+    "name": "Queens Road Peckham",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "940GZZLUQBY",
+    "name": "Queensbury",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUQWY",
+    "name": "Queensway",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLURVP",
+    "name": "Ravenscourt Park",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLURYL",
+    "name": "Rayners Lane",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GRDNGSTN",
+    "name": "Reading",
+    "mode": "elizabeth-line",
+    "network": "tfl"
+  },
+  {
+    "id": "910GRCTRYRD",
+    "name": "Rectory Road",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLURBG",
+    "name": "Redbridge",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "RDH",
+    "name": "Redhill",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "940GZZLURGP",
+    "name": "Regent's Park",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLURMD",
+    "name": "Richmond",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "RMD",
+    "name": "Richmond",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "910GRICHMND",
+    "name": "Richmond (London)",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLURKW",
+    "name": "Rickmansworth",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLURVY",
+    "name": "Roding Valley",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GROMFORD",
+    "name": "Romford",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "910GRTHERHI",
+    "name": "Rotherhithe",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZDLRAL",
+    "name": "Royal Albert",
+    "mode": "dlr",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLURYO",
+    "name": "Royal Oak",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZDLRVC",
+    "name": "Royal Victoria",
+    "mode": "dlr",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLURSP",
+    "name": "Ruislip",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLURSG",
+    "name": "Ruislip Gardens",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLURSM",
+    "name": "Ruislip Manor",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLURSQ",
+    "name": "Russell Square",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GSVNKNGS",
+    "name": "Seven Kings",
+    "mode": "elizabeth-line",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUSVS",
+    "name": "Seven Sisters",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GSEVNSIS",
+    "name": "Seven Sisters",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "910GSHADWEL",
+    "name": "Shadwell",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZDLSHA",
+    "name": "Shadwell",
+    "mode": "dlr",
+    "network": "tfl"
+  },
+  {
+    "id": "910GSHENFLD",
+    "name": "Shenfield",
+    "mode": "elizabeth-line",
+    "network": "tfl"
+  },
+  {
+    "id": "SHP",
+    "name": "Shepherd's Bush",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "940GZZLUSBC",
+    "name": "Shepherd's Bush (Central)",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUSBM",
+    "name": "Shepherd's Bush Market",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GSHPDSB",
+    "name": "Shepherds Bush",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "910GSHRDHST",
+    "name": "Shoreditch High Street",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "910GSIVRST",
+    "name": "Silver Street",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUSSQ",
+    "name": "Sloane Square",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GSLOUGH",
+    "name": "Slough",
+    "mode": "elizabeth-line",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUSNB",
+    "name": "Snaresbrook",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GSACTON",
+    "name": "South Acton",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUSEA",
+    "name": "South Ealing",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GSHMPSTD",
+    "name": "South Hampstead",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUSHH",
+    "name": "South Harrow",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUSKS",
+    "name": "South Kensington",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUSKT",
+    "name": "South Kenton",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GSKENTON",
+    "name": "South Kenton",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZDLSOQ",
+    "name": "South Quay",
+    "mode": "dlr",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUSRP",
+    "name": "South Ruislip",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "SRH",
+    "name": "South Ruislip",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "910GSTOTNHM",
+    "name": "South Tottenham",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUSWN",
+    "name": "South Wimbledon",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUSWF",
+    "name": "South Woodford",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GSTHALL",
+    "name": "Southall",
+    "mode": "elizabeth-line",
+    "network": "tfl"
+  },
+  {
+    "id": "910GSBURY",
+    "name": "Southbury",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUSFS",
+    "name": "Southfields",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUSGT",
+    "name": "Southgate",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUSWK",
+    "name": "Southwark",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GSTJMSST",
+    "name": "St James Street (London)",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "SAJ",
+    "name": "St Johns",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "940GZZLUSJP",
+    "name": "St. James's Park",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUSJW",
+    "name": "St. John's Wood",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUSPU",
+    "name": "St. Paul's",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUSFB",
+    "name": "Stamford Brook",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GSTMFDHL",
+    "name": "Stamford Hill",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUSTM",
+    "name": "Stanmore",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZDLSTL",
+    "name": "Star Lane",
+    "mode": "dlr",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUSGN",
+    "name": "Stepney Green",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUSKW",
+    "name": "Stockwell",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GSTKNWNG",
+    "name": "Stoke Newington",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUSGP",
+    "name": "Stonebridge Park",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GSTNBGPK",
+    "name": "Stonebridge Park",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUSTD",
+    "name": "Stratford",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZDLSTD",
+    "name": "Stratford",
+    "mode": "dlr",
+    "network": "tfl"
+  },
+  {
+    "id": "910GSTFD",
+    "name": "Stratford (London)",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZDLSHS",
+    "name": "Stratford High Street",
+    "mode": "dlr",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZDLSIT",
+    "name": "Stratford International",
+    "mode": "dlr",
+    "network": "tfl"
+  },
+  {
+    "id": "STJ",
+    "name": "Streatham",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "STC",
+    "name": "Streatham Common",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "940GZZLUSUH",
+    "name": "Sudbury Hill",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUSUT",
+    "name": "Sudbury Town",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "SUP",
+    "name": "Surbiton",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "910GSURREYQ",
+    "name": "Surrey Quays",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "SUR",
+    "name": "Sutton",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "940GZZLUSWC",
+    "name": "Swiss Cottage",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GSYDENHM",
+    "name": "Sydenham",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "910GTAPLOW",
+    "name": "Taplow",
+    "mode": "elizabeth-line",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUTMP",
+    "name": "Temple",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GTHBLDSG",
+    "name": "Theobalds Grove",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUTHB",
+    "name": "Theydon Bois",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "TON",
+    "name": "Tonbridge",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "940GZZLUTBC",
+    "name": "Tooting Bec",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUTBY",
+    "name": "Tooting Broadway",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUTCR",
+    "name": "Tottenham Court Road",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GTOTCTRD",
+    "name": "Tottenham Court Road",
+    "mode": "elizabeth-line",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUTMH",
+    "name": "Tottenham Hale",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUTAW",
+    "name": "Totteridge & Whetstone",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZDLTWG",
+    "name": "Tower Gateway",
+    "mode": "dlr",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUTWH",
+    "name": "Tower Hill",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUTFP",
+    "name": "Tufnell Park",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GTURKYST",
+    "name": "Turkey Street",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUTNG",
+    "name": "Turnham Green",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUTPN",
+    "name": "Turnpike Lane",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "TWI",
+    "name": "Twickenham",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "910GTWYFORD",
+    "name": "Twyford",
+    "mode": "elizabeth-line",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUUPM",
+    "name": "Upminster",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GUPMNSTR",
+    "name": "Upminster",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUUPB",
+    "name": "Upminster Bridge",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUUPY",
+    "name": "Upney",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GUPRHLWY",
+    "name": "Upper Holloway",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUUPK",
+    "name": "Upton Park",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUUXB",
+    "name": "Uxbridge",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUVXL",
+    "name": "Vauxhall",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "VXH",
+    "name": "Vauxhall",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "940GZZLUVIC",
+    "name": "Victoria",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUWWL",
+    "name": "Walthamstow Central",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GWLTWCEN",
+    "name": "Walthamstow Central",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "910GWLTHQRD",
+    "name": "Walthamstow Queens Road",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "910GWNDSWRD",
+    "name": "Wandsworth Road",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "WPL",
+    "name": "Wandsworth Road",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "WNT",
+    "name": "Wandsworth Town",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "940GZZLUWSD",
+    "name": "Wanstead",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GWNSTDPK",
+    "name": "Wanstead Park",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "910GWAPPING",
+    "name": "Wapping",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUWRR",
+    "name": "Warren Street",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUWKA",
+    "name": "Warwick Avenue",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUWLO",
+    "name": "Waterloo",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUWAF",
+    "name": "Watford",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GWATFDHS",
+    "name": "Watford High Street",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "910GWATFJDC",
+    "name": "Watford Junction",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUWYC",
+    "name": "Wembley Central",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GWMBY",
+    "name": "Wembley Central",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUWYP",
+    "name": "Wembley Park",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUWTA",
+    "name": "West Acton",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUWBN",
+    "name": "West Brompton",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GWBRMPTN",
+    "name": "West Brompton",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "910GWCROYDN",
+    "name": "West Croydon",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "910GWDRYTON",
+    "name": "West Drayton",
+    "mode": "elizabeth-line",
+    "network": "tfl"
+  },
+  {
+    "id": "910GWEALING",
+    "name": "West Ealing",
+    "mode": "elizabeth-line",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUWFN",
+    "name": "West Finchley",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUWHM",
+    "name": "West Ham",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZDLWHM",
+    "name": "West Ham",
+    "mode": "dlr",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUWHP",
+    "name": "West Hampstead",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GWHMDSTD",
+    "name": "West Hampstead",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUWHW",
+    "name": "West Harrow",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZDLWIQ",
+    "name": "West India Quay",
+    "mode": "dlr",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUWKN",
+    "name": "West Kensington",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUWRP",
+    "name": "West Ruislip",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZDLWSV",
+    "name": "West Silvertown",
+    "mode": "dlr",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUWSP",
+    "name": "Westbourne Park",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZDLWFE",
+    "name": "Westferry",
+    "mode": "dlr",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUWSM",
+    "name": "Westminster",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUWCY",
+    "name": "White City",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GWHHRTLA",
+    "name": "White Hart Lane",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUWPL",
+    "name": "Whitechapel",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GWCHAPEL",
+    "name": "Whitechapel",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "910GWCHAPXR",
+    "name": "Whitechapel",
+    "mode": "elizabeth-line",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUWIG",
+    "name": "Willesden Green",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUWJN",
+    "name": "Willesden Junction",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GWLSDJHL",
+    "name": "Willesden Junction",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUWIM",
+    "name": "Wimbledon",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "WIM",
+    "name": "Wimbledon",
+    "mode": "national_rail",
+    "network": "national_rail"
+  },
+  {
+    "id": "940GZZLUWIP",
+    "name": "Wimbledon Park",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUWOG",
+    "name": "Wood Green",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUWLA",
+    "name": "Wood Lane",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GWDST",
+    "name": "Wood Street",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUWOF",
+    "name": "Woodford",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GWDGRNPK",
+    "name": "Woodgrange Park",
+    "mode": "overground",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZLUWOP",
+    "name": "Woodside Park",
+    "mode": "tube",
+    "network": "tfl"
+  },
+  {
+    "id": "910GWOLWXR",
+    "name": "Woolwich",
+    "mode": "elizabeth-line",
+    "network": "tfl"
+  },
+  {
+    "id": "940GZZDLWLA",
+    "name": "Woolwich Arsenal",
+    "mode": "dlr",
+    "network": "tfl"
+  },
+  {
+    "id": "WSB",
+    "name": "Woolwich Arsenal",
+    "mode": "national_rail",
+    "network": "national_rail"
+  }
+]

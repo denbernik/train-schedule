@@ -37,9 +37,29 @@ class StationType(Enum):
     The display layer uses this to apply appropriate styling.
     """
 
-    NATIONAL_RAIL = "National Rail"
-    TFL_TUBE = "TfL Underground"
-    TFL_BUS = "TfL Bus"          # Not needed now, but costs nothing to include
+    NATIONAL_RAIL  = "National Rail"
+    TFL_TUBE       = "TfL Underground"
+    TFL_BUS        = "TfL Bus"
+    TFL_OVERGROUND = "TfL Overground"
+    TFL_DLR        = "TfL DLR"
+    TFL_ELIZABETH  = "TfL Elizabeth"
+
+
+# Maps each StationType to the api_source string used by _fetch_leg().
+# All TfL sub-modes share the same REST client; National Rail uses its own.
+_API_SOURCE_MAP: dict[StationType, str] = {
+    StationType.NATIONAL_RAIL:  "national_rail",
+    StationType.TFL_TUBE:       "tfl",
+    StationType.TFL_OVERGROUND: "tfl",
+    StationType.TFL_DLR:        "tfl",
+    StationType.TFL_ELIZABETH:  "tfl",
+    StationType.TFL_BUS:        "tfl",
+}
+
+
+def api_source_for(station_type: StationType) -> str:
+    """Return the api_source string for a given StationType."""
+    return _API_SOURCE_MAP[station_type]
 
 
 @dataclass
