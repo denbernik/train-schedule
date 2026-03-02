@@ -11,6 +11,8 @@ settings = get_settings()
 _TFL_MAX_RESULTS = settings.tfl_max_departures
 _REFRESH_INTERVAL_SECONDS = max(5, settings.refresh_interval_seconds)
 _FINAL_DISPLAY_ROWS = 5
+_WALK_MIN_MINUTES = 0
+_WALK_MAX_MINUTES = 99
 
 
 def _fetch_leg(leg: RouteLeg) -> StationBoard:
@@ -29,6 +31,24 @@ def _fetch_leg(leg: RouteLeg) -> StationBoard:
 
 
 routes = load_routes()
+
+# Seed session-state walking times from URL query params (persisted across
+# reloads) or fall back to the route defaults on very first visit.
+for _i, _route in enumerate(routes):
+    _ss_key = f"walk_{_route.name}"
+    if _ss_key not in st.session_state:
+        _raw = st.query_params.get(f"walk_{_i}")
+        if _raw is not None:
+            try:
+                _stored = int(_raw)
+                if _WALK_MIN_MINUTES <= _stored <= _WALK_MAX_MINUTES:
+                    st.session_state[_ss_key] = _stored
+                else:
+                    st.session_state[_ss_key] = _route.walking_time_minutes
+            except (ValueError, TypeError):
+                st.session_state[_ss_key] = _route.walking_time_minutes
+        else:
+            st.session_state[_ss_key] = _route.walking_time_minutes
 
 st.title("🚂 Departure Board")
 st.caption(f"Auto-refresh every {_REFRESH_INTERVAL_SECONDS}s")
@@ -51,19 +71,23 @@ columns = st.columns(len(routes))
 
 for col, route in zip(columns, routes):
     with col:
+        walk_key = f"walk_{route.name}"
+        walking_time = st.number_input(
+            "🚶 min to station",
+            min_value=_WALK_MIN_MINUTES,
+            max_value=_WALK_MAX_MINUTES,
+            step=1,
+            key=walk_key,
+        )
         for leg in route.legs:
             board = _fetch_leg(leg)
             st.subheader(f"{board.station_name} → {leg.destination_name}")
-            st.caption(
-                f"Showing next departures you can catch: leaves in at least "
-                f"{route.walking_time_minutes} min"
-            )
             if board.has_error:
                 st.error(board.error_message)
             else:
                 visible_departures = filter_and_cap_departures(
                     departures=board.departures,
-                    walking_time_minutes=route.walking_time_minutes,
+                    walking_time_minutes=int(walking_time),
                     max_rows=_FINAL_DISPLAY_ROWS,
                 )
                 for dep in visible_departures:
@@ -79,3 +103,7 @@ for col, route in zip(columns, routes):
                     else:
                         line = f"{dep.display_time} → {dep.destination}{timetable_marker} {status}"
                     st.write(line)
+
+# Persist current walking times into the URL so they survive page reloads.
+for _i, _route in enumerate(routes):
+    st.query_params[f"walk_{_i}"] = str(st.session_state[f"walk_{_route.name}"])
