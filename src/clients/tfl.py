@@ -34,6 +34,10 @@ _topology_provider: TubeTopologyProvider | None = None
 _TIMETABLE_HORIZON_HOURS = 12
 _LIVE_TT_TOLERANCE_SECONDS = 60
 
+# Persist station names across refreshes so the board keeps showing a human-readable
+# name even when the live arrivals list is temporarily empty (last train gone, etc.).
+_station_name_cache: dict[str, str] = {}
+
 
 def fetch_departures(
     station_id: str | None = None,
@@ -135,7 +139,9 @@ def fetch_departures(
         )
 
         return StationBoard(
-            station_name=_extract_station_name(all_live_raw_arrivals, station_id),
+            station_name=_extract_station_name(
+                all_live_raw_arrivals, station_id, settings.tfl_api_key, timeout_seconds,
+            ),
             station_type=StationType.TFL_TUBE,
             departures=departures,
         )
@@ -251,13 +257,10 @@ def _fetch_timetable_journey_minutes(
     stop and return its timeToArrival value.
 
     Returns minutes as an int, or None if unavailable.
+    Falls back to StopPoint API when live arrivals provide no line IDs.
     """
-    line_ids = sorted(
-        {
-            item.get("lineId", "").strip().lower()
-            for item in live_raw_arrivals
-            if isinstance(item.get("lineId"), str) and item.get("modeName") == "tube"
-        }
+    line_ids = _resolve_tube_line_ids(
+        live_raw_arrivals, origin_station_id, api_key, timeout_seconds,
     )
     if not line_ids:
         return None
@@ -360,13 +363,11 @@ def _fetch_timetable_candidates(
 
     We query relevant line IDs discovered in live arrivals, for directions seen
     in the payload. If direction data is missing, query both directions.
+    Falls back to StopPoint API when live arrivals provide no line IDs
+    (e.g. last train has departed for the night).
     """
-    line_ids = sorted(
-        {
-            item.get("lineId", "").strip().lower()
-            for item in live_raw_arrivals
-            if isinstance(item.get("lineId"), str) and item.get("modeName") == "tube"
-        }
+    line_ids = _resolve_tube_line_ids(
+        live_raw_arrivals, origin_station_id, api_key, timeout_seconds,
     )
     if not line_ids:
         return []
@@ -799,17 +800,93 @@ def _parse_single_arrival(
     )
 
 
-def _extract_station_name(raw_arrivals: list[dict], fallback: str) -> str:
+def _extract_station_name(
+    raw_arrivals: list[dict],
+    station_id: str,
+    api_key: str,
+    timeout_seconds: int,
+) -> str:
     """
-    Pull the station name from the API response.
+    Resolve a human-readable station name, with three-tier fallback.
 
-    Each arrival prediction includes stationName, so we grab it from
-    the first entry. Falls back to the station ID if no arrivals exist
-    (e.g., last train has departed for the night).
+    1. stationName from the live arrivals response (cheapest — already fetched).
+    2. Module-level cache populated by a previous successful response.
+    3. GET /StopPoint/{id} → commonName (one extra call, only when cache is cold).
+
+    Falls back to the raw station_id only if all sources fail. This ensures
+    the board always shows "East Putney Underground Station" rather than
+    "940GZZLUEPY" when the last train of the night has departed.
     """
     if raw_arrivals:
-        return raw_arrivals[0].get("stationName", fallback)
-    return fallback
+        name = raw_arrivals[0].get("stationName") or station_id
+        _station_name_cache[station_id] = name
+        return name
+
+    if station_id in _station_name_cache:
+        return _station_name_cache[station_id]
+
+    try:
+        url = f"{_BASE_URL}/StopPoint/{station_id}"
+        params: dict = {}
+        if api_key:
+            params["app_key"] = api_key
+        resp = requests.get(url, params=params, timeout=timeout_seconds)
+        resp.raise_for_status()
+        name = resp.json().get("commonName") or station_id
+        _station_name_cache[station_id] = name
+        return name
+    except (requests.RequestException, ValueError, KeyError) as e:
+        logger.warning("TfL StopPoint name lookup failed for %s: %s", station_id, e)
+        return station_id
+
+
+def _resolve_tube_line_ids(
+    live_raw_arrivals: list[dict],
+    station_id: str,
+    api_key: str,
+    timeout_seconds: int,
+) -> list[str]:
+    """
+    Return the tube line IDs serving a station, with StopPoint fallback.
+
+    Primary source: lineId fields from the live arrivals payload.
+    Fallback: GET /StopPoint/{id} → lines[], used when live arrivals are
+    absent (e.g. last train gone for the night). This ensures timetable
+    candidates and journey-time lookups still work outside service hours.
+    """
+    line_ids = sorted(
+        {
+            item.get("lineId", "").strip().lower()
+            for item in live_raw_arrivals
+            if isinstance(item.get("lineId"), str) and item.get("modeName") == "tube"
+        }
+    )
+    if line_ids:
+        return line_ids
+
+    try:
+        url = f"{_BASE_URL}/StopPoint/{station_id}"
+        params: dict = {}
+        if api_key:
+            params["app_key"] = api_key
+        resp = requests.get(url, params=params, timeout=timeout_seconds)
+        resp.raise_for_status()
+        lines = resp.json().get("lines", [])
+        fallback_ids = sorted(
+            {
+                line.get("id", "").strip().lower()
+                for line in lines
+                if isinstance(line.get("id"), str) and line.get("id", "").strip()
+            }
+        )
+        if fallback_ids:
+            logger.debug(
+                "TfL StopPoint line fallback for %s: %s", station_id, fallback_ids
+            )
+        return fallback_ids
+    except (requests.RequestException, ValueError, KeyError) as e:
+        logger.warning("TfL StopPoint line lookup failed for %s: %s", station_id, e)
+        return []
 
 
 def _merge_departures_live_first(
