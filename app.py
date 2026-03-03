@@ -74,12 +74,33 @@ st.title("🚂 Departure Board")
 st.caption(f"Auto-refresh every {_REFRESH_INTERVAL_SECONDS}s")
 
 # Auto-refresh via JS timer — reload preserves the full URL (including query params).
+# Also patches selectbox inputs so they clear-on-focus: the current value is
+# auto-selected when the dropdown opens, meaning the user can type immediately
+# to search without manually deleting the existing text first.
+# A guard flag prevents duplicate listeners across Streamlit reruns.
 components.html(
     f"""
     <script>
       setTimeout(function() {{
         window.parent.location.reload();
       }}, {_REFRESH_INTERVAL_SECONDS * 1000});
+
+      (function() {{
+        var doc = window.parent.document;
+        if (doc.__stSelectClearAttached) return;
+        doc.__stSelectClearAttached = true;
+        // On every mousedown inside a baseweb Select, wait long enough for
+        // the component to open and populate the search input, then select
+        // all that text so the user can just start typing from scratch.
+        doc.addEventListener('mousedown', function(e) {{
+          var container = e.target.closest('[data-baseweb="select"]');
+          if (!container) return;
+          setTimeout(function() {{
+            var inp = container.querySelector('input');
+            if (inp && inp.value) {{ inp.select(); }}
+          }}, 80);
+        }}, true);
+      }})();
     </script>
     """,
     height=0,
