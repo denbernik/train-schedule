@@ -20,6 +20,8 @@ def filter_and_cap_departures(
     """
     filtered = []
     for dep in departures:
+        if dep.is_cancelled:
+            continue
         minutes_until = _minutes_until(dep)
         if minutes_until is not None and minutes_until >= walking_time_minutes:
             filtered.append(dep)
