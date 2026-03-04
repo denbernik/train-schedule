@@ -86,8 +86,8 @@ class Settings(BaseSettings):
     transport_api_refresh_seconds: int = 3600
 
     # Refresh cadence for National Rail board rows (seconds).
-    # LDB has better limits than TransportAPI; 30s keeps data fresh.
-    national_rail_refresh_seconds: int = 30
+    # LDB has better limits than TransportAPI; 60s keeps data fresh.
+    national_rail_refresh_seconds: int = 60
 
     # How many National Rail departures to prefetch each refresh cycle.
     # UI still applies catchability filter and final 5-row cap.
@@ -96,8 +96,8 @@ class Settings(BaseSettings):
 
     # How often to refresh data, in seconds.
     # Keep this reasonably low so East Putney eastbound services appear quickly.
-    # 30s is a good balance between freshness and API usage.
-    refresh_interval_seconds: int = 30
+    # 60s is a good balance between freshness and API usage.
+    refresh_interval_seconds: int = 60
 
     # --- App metadata ---
     app_title: str = "🚂 Departure Board"
