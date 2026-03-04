@@ -7,6 +7,7 @@ from src.models import DepartureStatus, StationBoard, api_source_for
 from src.refresh import fetch_national_rail_for_leg, fetch_tfl_for_leg
 from src.routes import RouteLeg, load_routes
 from src.station_registry import StationInfo, load_stations, networks_compatible, selectbox_options
+from src.status import ActionStatus, compute_action_status
 
 settings = get_settings()
 _TFL_MAX_RESULTS = settings.tfl_max_departures
@@ -36,6 +37,14 @@ def _fetch_leg(leg: RouteLeg) -> StationBoard:
 
 
 routes = load_routes()
+
+# Maps each ActionStatus.display value to the corresponding Streamlit alert function.
+_STATUS_DISPLAY = {
+    "error":   st.error,
+    "warning": st.warning,
+    "success": st.success,
+    "info":    st.info,
+}
 
 # ── Seed session state from URL query params, falling back to route defaults ──
 for _i, _route in enumerate(routes):
@@ -172,8 +181,12 @@ for col_idx, (col, route) in enumerate(zip(columns, routes)):
         board = _fetch_leg(dynamic_leg)
         st.subheader(f"{board.station_name} → {dynamic_leg.destination_name}")
         if board.has_error:
+            _STATUS_DISPLAY["info"]("🔌 No data — check the National Rail app or TfL Go")
             st.error(board.error_message)
         else:
+            action = compute_action_status(board.departures, int(walking_time))
+            _STATUS_DISPLAY[action.display](f"{action.emoji} {action.label}")
+
             visible_departures = filter_and_cap_departures(
                 departures=board.departures,
                 walking_time_minutes=int(walking_time),
