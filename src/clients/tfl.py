@@ -770,7 +770,7 @@ def _parse_timetable_arrivals(
                 arrival_time = expected_time + timedelta(minutes=timetable_journey_minutes)
             departures.append(
                 Departure(
-                    destination=arrival.get("destinationName", "Unknown"),
+                    destination=_clean_destination(arrival.get("destinationName", "Unknown")),
                     scheduled_time=expected_time,
                     expected_time=expected_time,
                     status=DepartureStatus.NO_REPORT,
@@ -833,7 +833,7 @@ def _parse_single_arrival(
         arrival_time = expected_arrival + timedelta(minutes=timetable_journey_minutes)
 
     return Departure(
-        destination=arrival["destinationName"],
+        destination=_clean_destination(arrival["destinationName"]),
         scheduled_time=expected_arrival,  # TfL doesn't separate scheduled vs expected
         expected_time=expected_arrival,
         status=DepartureStatus.ON_TIME,
@@ -1016,6 +1016,14 @@ def _find_live_boundary_match_index(
             return index
 
     return None
+
+
+def _clean_destination(name: str) -> str:
+    """Strip trailing ' Underground Station' suffix from TfL destination names."""
+    suffix = " Underground Station"
+    if name.lower().endswith(suffix.lower()):
+        return name[: -len(suffix)]
+    return name
 
 
 def _error_board(station_id: str, message: str) -> StationBoard:
