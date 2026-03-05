@@ -78,6 +78,14 @@ def fetch_departures(
             destination_station_id=destination_station_id,
             api_key=settings.tfl_api_key,
         )
+        if filter_error == _NO_DIRECT_ROUTE:
+            return StationBoard(
+                station_name=_extract_station_name(
+                    all_live_raw_arrivals, station_id, settings.tfl_api_key, timeout_seconds,
+                ),
+                station_type=StationType.TFL_TUBE,
+                no_direct_route=True,
+            )
         if filter_error:
             return _error_board(station_id, filter_error)
 
@@ -118,6 +126,14 @@ def fetch_departures(
                     destination_station_id=destination_station_id,
                     api_key=settings.tfl_api_key,
                 )
+                if timetable_filter_error == _NO_DIRECT_ROUTE:
+                    return StationBoard(
+                        station_name=_extract_station_name(
+                            all_live_raw_arrivals, station_id, settings.tfl_api_key, timeout_seconds,
+                        ),
+                        station_type=StationType.TFL_TUBE,
+                        no_direct_route=True,
+                    )
                 if timetable_filter_error:
                     return _error_board(station_id, timetable_filter_error)
                 timetable_departures = _parse_timetable_arrivals(
@@ -594,6 +610,16 @@ def _get_topology_provider(api_key: str) -> TubeTopologyProvider:
     return _topology_provider
 
 
+# TfL modes whose line sequences are tracked by TubeTopologyProvider.
+# Arrivals on these modes are subject to destination pass-through filtering;
+# arrivals on other modes (e.g. bus) are returned unfiltered.
+_TOPOLOGY_MODES: frozenset[str] = frozenset({"tube", "dlr", "elizabeth-line", "overground"})
+
+# Sentinel returned by _filter_arrivals_for_destination when stations have no
+# through service (different lines or different branches of the same line).
+_NO_DIRECT_ROUTE = "_no_direct_route"
+
+
 def _filter_arrivals_for_destination(
     raw_arrivals: list[dict],
     origin_station_id: str,
@@ -613,7 +639,8 @@ def _filter_arrivals_for_destination(
     line_ids = {
         arrival.get("lineId", "").strip().lower()
         for arrival in raw_arrivals
-        if isinstance(arrival.get("lineId"), str) and arrival.get("modeName") == "tube"
+        if isinstance(arrival.get("lineId"), str)
+        and arrival.get("modeName") in _TOPOLOGY_MODES
     }
     if not line_ids:
         return raw_arrivals, None
@@ -629,17 +656,24 @@ def _filter_arrivals_for_destination(
         return raw_arrivals, None
 
     if not reachable:
-        return [], (
-            f"Configured destination {destination_station_id} is not reachable "
-            f"from {origin_station_id} on this Tube leg"
-        )
+        # Distinguish service suspension from genuinely unconnected stations.
+        # Sequence-membership check: if both stations appear in a single cached
+        # route sequence, a through train can serve them — so this is a suspension.
+        # If no single sequence contains both, no direct service exists (different
+        # lines or different branches of the same line).
+        try:
+            if not provider.has_direct_connection(origin_station_id, destination_station_id):
+                return [], _NO_DIRECT_ROUTE  # no through service → show error
+        except Exception:
+            pass  # can't determine; fall through to ⛔
+        return [], None  # through service exists but suspended, or unknown → ⛔
 
     filtered: list[dict] = []
     for arrival in raw_arrivals:
         line_id = arrival.get("lineId")
         terminal_station_id = arrival.get("destinationNaptanId")
         mode_name = arrival.get("modeName")
-        if mode_name != "tube":
+        if mode_name not in _TOPOLOGY_MODES:
             continue
         if not isinstance(line_id, str) or not isinstance(terminal_station_id, str):
             # No destination station id in payload: cannot safely prove pass-through.
@@ -655,6 +689,16 @@ def _filter_arrivals_for_destination(
         except TopologyUnavailableError as e:
             logger.warning("Unable to evaluate service pass-through: %s", e)
             return raw_arrivals, None
+
+    # Case B: had live topology-tracked arrivals but none pass through destination.
+    # Happens for different-branch pairs (e.g. Angel → Charing Cross) where
+    # has_path returns True via the merged graph but no actual through train exists.
+    if not filtered and line_ids:
+        try:
+            if not provider.has_direct_connection(origin_station_id, destination_station_id):
+                return [], _NO_DIRECT_ROUTE
+        except Exception:
+            pass
 
     return filtered, None
 

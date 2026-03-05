@@ -168,6 +168,16 @@ for col_idx, (col, route) in enumerate(zip(columns, routes)):
             )
             continue
 
+        # ── Service type compatibility check (within TfL) ────────────────────
+        if dep_info.network == "tfl" and dep_info.mode != arr_info.mode:
+            st.error(
+                f"**Service type mismatch — cannot show departures**\n\n"
+                f"**{dep_info.name}** is **{dep_info.display_label.split('(')[-1].rstrip(')')}** "
+                f"but **{arr_info.name}** is **{arr_info.display_label.split('(')[-1].rstrip(')')}**.\n\n"
+                f"Select two stations on the same service."
+            )
+            continue
+
         # ── Build RouteLeg dynamically and fetch ──────────────────────────────
         dynamic_leg = RouteLeg(
             origin_station_id=dep_info.id,
@@ -179,10 +189,14 @@ for col_idx, (col, route) in enumerate(zip(columns, routes)):
         )
 
         board = _fetch_leg(dynamic_leg)
-        st.subheader(f"{board.station_name} → {dynamic_leg.destination_name}")
         if board.has_error:
             _STATUS_DISPLAY["info"]("🔌 No data — check the National Rail app or TfL Go")
             st.error(board.error_message)
+        elif board.no_direct_route:
+            st.error(
+                "**No direct service** — these stations are not on the same route.\n\n"
+                "Select two stations with a through train between them."
+            )
         else:
             action = compute_action_status(board.departures, int(walking_time))
             _STATUS_DISPLAY[action.display](f"{action.emoji} {action.label}")

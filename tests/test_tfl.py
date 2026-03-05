@@ -4,6 +4,7 @@ import requests
 from datetime import datetime, timezone
 
 from src.clients.tfl import (
+    _NO_DIRECT_ROUTE,
     _filter_arrivals_for_destination,
     _merge_departures_live_first,
     fetch_departures,
@@ -114,6 +115,13 @@ class FakeTopologyProvider:
             ]
         }
 
+    def has_direct_connection(self, origin_station_id: str, destination_station_id: str) -> bool:
+        for sequences in self.lines.values():
+            for seq in sequences:
+                if origin_station_id in seq and destination_station_id in seq:
+                    return True
+        return False
+
     def has_path(self, line_id: str, origin_station_id: str, destination_station_id: str) -> bool:
         for sequence in self.lines.get(line_id.lower(), []):
             if origin_station_id in sequence and destination_station_id in sequence:
@@ -195,7 +203,9 @@ def test_east_putney_to_edgware_road_district_is_valid(mock_provider):
 
 
 @patch("src.clients.tfl._get_topology_provider", return_value=FakeTopologyProvider())
-def test_east_putney_to_edgware_road_bakerloo_returns_error(mock_provider):
+def test_east_putney_to_edgware_road_bakerloo_returns_no_direct_route(mock_provider):
+    # Bakerloo Edgware Road is on a different line from East Putney (District).
+    # Filter returns _NO_DIRECT_ROUTE so the board shows a "No direct service" error.
     filtered, error = _filter_arrivals_for_destination(
         raw_arrivals=RAW_ARRIVALS,
         origin_station_id=EAST_PUTNEY,
@@ -203,8 +213,7 @@ def test_east_putney_to_edgware_road_bakerloo_returns_error(mock_provider):
         api_key="test",
     )
     assert filtered == []
-    assert error is not None
-    assert "not reachable" in error
+    assert error == _NO_DIRECT_ROUTE
 
 
 @patch("src.clients.tfl._get_topology_provider", return_value=FakeTopologyProvider())
@@ -245,16 +254,22 @@ def test_topology_unavailable_falls_back_to_unfiltered_arrivals(mock_provider):
 
 @patch("src.clients.tfl._get_topology_provider", return_value=FakeTopologyProvider())
 @patch("src.clients.tfl._call_api", return_value=RAW_ARRIVALS)
+@patch("src.clients.tfl._call_timetable_api", side_effect=requests.RequestException("no timetable"))
 @patch("src.clients.tfl.get_settings")
-def test_fetch_departures_returns_explicit_error_for_invalid_leg(
+def test_fetch_departures_returns_empty_board_for_unreachable_leg(
     mock_settings,
+    mock_timetable,
     mock_call_api,
     mock_provider,
 ):
+    # Unreachable destination → no error board, empty departures → ⛔ in UI.
+    # The service-type mismatch error is shown at the app.py layer, not here.
     settings = MagicMock()
     settings.tfl_station_id = EAST_PUTNEY
+    settings.tfl_max_departures = 10
     settings.max_departures = 10
     settings.tfl_api_key = "test-key"
+    settings.tfl_timeout_seconds = 10
     mock_settings.return_value = settings
 
     board = fetch_departures(
@@ -262,8 +277,8 @@ def test_fetch_departures_returns_explicit_error_for_invalid_leg(
         destination_station_id=EDGWARE_ROAD_BAKERLOO,
     )
 
-    assert board.has_error
-    assert "not reachable" in (board.error_message or "")
+    assert not board.has_error
+    assert board.no_direct_route is True
     assert board.departures == []
 
 

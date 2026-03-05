@@ -155,6 +155,7 @@ class StationBoard:
     departures: list[Departure] = field(default_factory=list)
     last_updated: datetime = field(default_factory=datetime.now)
     error_message: str | None = None    # Set when API call fails
+    no_direct_route: bool = False       # True when no through service exists between stations
 
     @property
     def has_error(self) -> bool:

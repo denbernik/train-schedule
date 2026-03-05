@@ -69,6 +69,26 @@ class TubeTopologyProvider:
         graph = self._build_graph(sequences)
         return self._distance(graph, origin_station_id, destination_station_id) is not None
 
+    def has_direct_connection(self, origin_station_id: str, destination_station_id: str) -> bool:
+        """Return True if any cached route sequence contains BOTH stations.
+
+        A shared sequence means a through train can serve both without a change.
+        This correctly handles branch pairs (e.g. Angel on Bank branch vs Charing
+        Cross on Charing Cross branch — no single sequence contains both).
+
+        Uses only disk cache or snapshot — no API calls.
+        Returns False (conservative) if cache is empty.
+        """
+        cache = self._load_disk_cache() or self._load_snapshot_data()
+        if not cache:
+            return False
+        for sequences in cache.get("lines", {}).values():
+            for seq in sequences:
+                seq_set = set(seq)
+                if origin_station_id in seq_set and destination_station_id in seq_set:
+                    return True
+        return False
+
     def service_passes_through(
         self,
         line_id: str,
