@@ -129,16 +129,50 @@ def _swap_stations(idx: int) -> None:
     st.session_state[f"arr_{idx}"] = dep_val[1].id
 
 
-# ── Prevent inner station-picker sub-columns from stacking on narrow screens ──
+def _walk_dec(route_name: str) -> None:
+    v = int(st.session_state.get(f"walk_{route_name}", 0))
+    st.session_state[f"walk_{route_name}"] = max(_WALK_MIN_MINUTES, v - 1)
+
+
+def _walk_inc(route_name: str) -> None:
+    v = int(st.session_state.get(f"walk_{route_name}", 0))
+    st.session_state[f"walk_{route_name}"] = min(_WALK_MAX_MINUTES, v + 1)
+
+
+# ── Layout CSS ──────────────────────────────────────────────────────────────
+# The inner two-column layout (left controls + right pickers) must never stack.
+# :has([data-baseweb="select"]) identifies that specific block (it contains the
+# Departure/Arrival selectboxes), so fixed-width rules only apply there and not
+# to other nested columns (e.g. the −/+ stepper buttons).
 st.markdown(
     """
     <style>
-    [data-testid="stColumn"] [data-testid="stHorizontalBlock"] {
+    /* Left+right block: no stacking, left col fixed at 70px, right fills rest */
+    [data-testid="stColumn"] [data-testid="stHorizontalBlock"]:has([data-baseweb="select"]) {
         flex-wrap: nowrap !important;
         flex-direction: row !important;
     }
-    [data-testid="stColumn"] [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {
-        min-width: 0;
+    [data-testid="stColumn"] [data-testid="stHorizontalBlock"]:has([data-baseweb="select"])
+        > [data-testid="stColumn"]:first-child {
+        flex: 0 0 70px !important;
+        width: 70px !important;
+        min-width: 70px !important;
+        max-width: 70px !important;
+    }
+    [data-testid="stColumn"] [data-testid="stHorizontalBlock"]:has([data-baseweb="select"])
+        > [data-testid="stColumn"]:last-child {
+        flex: 1 1 auto !important;
+        min-width: 0 !important;
+        max-width: none !important;
+    }
+    /* Other nested blocks (e.g. −/+ stepper): no stacking, equal flexible columns */
+    [data-testid="stColumn"] [data-testid="stHorizontalBlock"]:not(:has([data-baseweb="select"])) {
+        flex-wrap: nowrap !important;
+        flex-direction: row !important;
+    }
+    [data-testid="stColumn"] [data-testid="stHorizontalBlock"]:not(:has([data-baseweb="select"]))
+        > [data-testid="stColumn"] {
+        min-width: 0 !important;
     }
     </style>
     """,
@@ -152,20 +186,15 @@ _col_selections: list[tuple[StationInfo, StationInfo]] = []
 
 for col_idx, (col, route) in enumerate(zip(columns, routes)):
     with col:
-        # ── Walking time ──────────────────────────────────────────────────────
-        walking_time = st.number_input(
-            "🚶 min to station",
-            min_value=_WALK_MIN_MINUTES,
-            max_value=_WALK_MAX_MINUTES,
-            step=1,
-            key=f"walk_{route.name}",
-        )
+        # Read walking time from session state (pre-seeded from URL params above)
+        walking_time = int(st.session_state.get(f"walk_{route.name}", route.walking_time_minutes))
 
-        # ── Station pickers with swap button on the left ──────────────────────
-        _btn_col, _sel_col = st.columns([1, 8])
+        # ── Two-column layout: fixed-width left controls + flexible right pickers ──
+        _left_col, _right_col = st.columns([1, 6])
 
+        # ── Right col: Departure ──────────────────────────────────────────────
         dep_init = _option_idx.get(st.session_state[f"dep_{col_idx}"], 0)
-        with _sel_col:
+        with _right_col:
             dep_sel = st.selectbox(
                 "Departure",
                 _options,
@@ -175,18 +204,24 @@ for col_idx, (col, route) in enumerate(zip(columns, routes)):
             )
         dep_info: StationInfo = dep_sel[1]
 
-        with _btn_col:
-            st.markdown('<div style="height: 70px;"></div>', unsafe_allow_html=True)
+        # ── Left col: swap button (centred between Departure and Arrival) ──────
+        with _left_col:
+            # Spacer pushes the button down to the visual midpoint between the
+            # two selectboxes (label ~20px + input ~38px = ~58px per selectbox;
+            # centre is roughly at 20px label + 19px = ~39px from top).
+            st.markdown('<div style="height:70px"></div>', unsafe_allow_html=True)
             st.button(
                 "⇅",
                 key=f"swap_{col_idx}",
                 on_click=_swap_stations,
                 args=(col_idx,),
                 help="Swap departure ↔ arrival",
+                use_container_width=True,
             )
 
+        # ── Right col: Arrival ────────────────────────────────────────────────
         arr_init = _option_idx.get(st.session_state[f"arr_{col_idx}"], 0)
-        with _sel_col:
+        with _right_col:
             arr_sel = st.selectbox(
                 "Arrival",
                 _options,
@@ -198,26 +233,45 @@ for col_idx, (col, route) in enumerate(zip(columns, routes)):
 
         _col_selections.append((dep_info, arr_info))
 
+        # ── Left col: walking-time stepper (bottom) ───────────────────────────
+        with _left_col:
+            st.markdown(
+                f'<p style="text-align:center;font-size:0.65em;color:var(--text-color,#888);'
+                f'margin:0 0 1px;line-height:1">min to station</p>'
+                f'<p style="text-align:center;font-size:1.6em;font-weight:bold;'
+                f'margin:0 0 2px;line-height:1">{walking_time}</p>',
+                unsafe_allow_html=True,
+            )
+            _dec_col, _inc_col = st.columns(2, gap="small")
+            with _dec_col:
+                st.button("−", key=f"wd_{col_idx}", on_click=_walk_dec,
+                          args=(route.name,), use_container_width=True)
+            with _inc_col:
+                st.button("＋", key=f"wi_{col_idx}", on_click=_walk_inc,
+                          args=(route.name,), use_container_width=True)
+
         # ── Network compatibility check ───────────────────────────────────────
         if not networks_compatible(dep_info, arr_info):
             dep_net = "TfL" if dep_info.network == "tfl" else "National Rail"
             arr_net = "TfL" if arr_info.network == "tfl" else "National Rail"
-            st.error(
-                f"**Network mismatch — cannot show departures**\n\n"
-                f"**{dep_info.name}** is on **{dep_net}** "
-                f"but **{arr_info.name}** is on **{arr_net}**.\n\n"
-                f"Select two stations on the same network."
-            )
+            with _right_col:
+                st.error(
+                    f"**Network mismatch — cannot show departures**\n\n"
+                    f"**{dep_info.name}** is on **{dep_net}** "
+                    f"but **{arr_info.name}** is on **{arr_net}**.\n\n"
+                    f"Select two stations on the same network."
+                )
             continue
 
         # ── Service type compatibility check (within TfL) ────────────────────
         if dep_info.network == "tfl" and dep_info.mode != arr_info.mode:
-            st.error(
-                f"**Service type mismatch — cannot show departures**\n\n"
-                f"**{dep_info.name}** is **{dep_info.display_label.split('(')[-1].rstrip(')')}** "
-                f"but **{arr_info.name}** is **{arr_info.display_label.split('(')[-1].rstrip(')')}**.\n\n"
-                f"Select two stations on the same service."
-            )
+            with _right_col:
+                st.error(
+                    f"**Service type mismatch — cannot show departures**\n\n"
+                    f"**{dep_info.name}** is **{dep_info.display_label.split('(')[-1].rstrip(')')}** "
+                    f"but **{arr_info.name}** is **{arr_info.display_label.split('(')[-1].rstrip(')')}**.\n\n"
+                    f"Select two stations on the same service."
+                )
             continue
 
         # ── Build RouteLeg dynamically and fetch ──────────────────────────────
@@ -231,36 +285,43 @@ for col_idx, (col, route) in enumerate(zip(columns, routes)):
         )
 
         board = _fetch_leg(dynamic_leg)
-        if board.has_error:
-            _STATUS_DISPLAY["info"]("🔌 No data — check the National Rail app or TfL Go")
-            st.error(board.error_message)
-        elif board.no_direct_route:
-            st.error(
-                "**No direct service** — these stations are not on the same route.\n\n"
-                "Select two stations with a through train between them."
-            )
-        else:
-            action = compute_action_status(board.departures, int(walking_time))
-            _STATUS_DISPLAY[action.display](f"{action.emoji} {action.label}")
 
-            visible_departures = filter_and_cap_departures(
-                departures=board.departures,
-                walking_time_minutes=int(walking_time),
-                max_rows=_FINAL_DISPLAY_ROWS,
-            )
-            for dep in visible_departures:
-                status = f"({dep.status.value})" if dep.is_delayed or dep.is_cancelled else ""
-                timetable_marker = (
-                    " *"
-                    if dynamic_leg.api_source == "tfl" and dep.status == DepartureStatus.NO_REPORT
-                    else ""
+        # ── Right col: status ─────────────────────────────────────────────────
+        with _right_col:
+            if board.has_error:
+                _STATUS_DISPLAY["info"]("🔌 No data — check the National Rail app or TfL Go")
+                st.error(board.error_message)
+            elif board.no_direct_route:
+                st.error(
+                    "**No direct service** — these stations are not on the same route.\n\n"
+                    "Select two stations with a through train between them."
                 )
-                if dep.display_arrival_time:
-                    duration_part = f" ({dep.display_duration})" if dep.display_duration else ""
-                    line = f"{dep.display_time} - {dep.display_arrival_time}{duration_part} → {dep.destination} {status}"
-                else:
-                    line = f"{dep.display_time} → {dep.destination}{timetable_marker} {status}"
-                st.write(line)
+            else:
+                action = compute_action_status(board.departures, walking_time)
+                _STATUS_DISPLAY[action.display](f"{action.emoji} {action.label}")
+
+        if board.has_error or board.no_direct_route:
+            continue
+
+        # ── Departures list (full-width within route column) ──────────────────
+        visible_departures = filter_and_cap_departures(
+            departures=board.departures,
+            walking_time_minutes=walking_time,
+            max_rows=_FINAL_DISPLAY_ROWS,
+        )
+        for dep in visible_departures:
+            status = f"({dep.status.value})" if dep.is_delayed or dep.is_cancelled else ""
+            timetable_marker = (
+                " *"
+                if dynamic_leg.api_source == "tfl" and dep.status == DepartureStatus.NO_REPORT
+                else ""
+            )
+            if dep.display_arrival_time:
+                duration_part = f" ({dep.display_duration})" if dep.display_duration else ""
+                line = f"{dep.display_time} - {dep.display_arrival_time}{duration_part} → {dep.destination} {status}"
+            else:
+                line = f"{dep.display_time} → {dep.destination}{timetable_marker} {status}"
+            st.write(line)
 
 # ── Persist all selections into the URL (survives auto-refresh and manual reload) ──
 for _i, _route in enumerate(routes):
