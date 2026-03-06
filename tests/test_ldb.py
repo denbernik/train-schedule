@@ -5,6 +5,7 @@ import pytest
 
 from src.clients.ldb import (
     LdbApiError,
+    _destination_from_relevant_portion,
     _extract_arrival_time,
     _has_destination_in_calling_points,
     call_departure_board,
@@ -421,3 +422,139 @@ def test_display_duration_none_when_no_arrival():
         status=DepartureStatus.ON_TIME,
     )
     assert dep.display_duration is None
+
+
+# --- _destination_from_relevant_portion tests ---
+
+def test_destination_from_relevant_portion_split_service_flat_list():
+    """Split service: portion containing filter CRS terminates at Weybridge;
+    other portion continues to Addlestone. Should return 'Weybridge', not 'Addlestone'."""
+    service = {
+        "destination": [{"locationName": "Addlestone", "crs": "ADS"}],
+        "subsequentCallingPoints": [
+            [
+                {"locationName": "Vauxhall", "crs": "VXH", "st": "09:05"},
+                {"locationName": "Wandsworth Town", "crs": "WNT", "st": "09:09"},
+                {"locationName": "Clapham Junction", "crs": "CLJ", "st": "09:12"},
+                {"locationName": "Weybridge", "crs": "WEY", "st": "09:45"},
+            ],
+            [
+                {"locationName": "Weybridge", "crs": "WEY", "st": "09:45"},
+                {"locationName": "Byfleet & New Haw", "crs": "BYF", "st": "09:49"},
+                {"locationName": "Addlestone", "crs": "ADS", "st": "09:53"},
+            ],
+        ],
+    }
+    assert _destination_from_relevant_portion(service, "WNT") == "Weybridge"
+
+
+def test_destination_from_relevant_portion_split_service_wrapped_shape():
+    """Same split-service scenario but with wrapped callingPoint dicts."""
+    service = {
+        "destination": [{"locationName": "Addlestone", "crs": "ADS"}],
+        "subsequentCallingPoints": [
+            {"callingPoint": [
+                {"locationName": "Vauxhall", "crs": "VXH", "st": "09:05"},
+                {"locationName": "Wandsworth Town", "crs": "WNT", "st": "09:09"},
+                {"locationName": "Clapham Junction", "crs": "CLJ", "st": "09:12"},
+                {"locationName": "Weybridge", "crs": "WEY", "st": "09:45"},
+            ]},
+            {"callingPoint": [
+                {"locationName": "Weybridge", "crs": "WEY", "st": "09:45"},
+                {"locationName": "Byfleet & New Haw", "crs": "BYF", "st": "09:49"},
+                {"locationName": "Addlestone", "crs": "ADS", "st": "09:53"},
+            ]},
+        ],
+    }
+    assert _destination_from_relevant_portion(service, "WNT") == "Weybridge"
+
+
+def test_destination_from_relevant_portion_through_service_to_addlestone():
+    """Non-split service calling at WNT and continuing all the way to Addlestone
+    should still return 'Addlestone'."""
+    service = {
+        "destination": [{"locationName": "Addlestone", "crs": "ADS"}],
+        "subsequentCallingPoints": [
+            [
+                {"locationName": "Vauxhall", "crs": "VXH", "st": "09:05"},
+                {"locationName": "Wandsworth Town", "crs": "WNT", "st": "09:09"},
+                {"locationName": "Clapham Junction", "crs": "CLJ", "st": "09:12"},
+                {"locationName": "Weybridge", "crs": "WEY", "st": "09:45"},
+                {"locationName": "Byfleet & New Haw", "crs": "BYF", "st": "09:49"},
+                {"locationName": "Addlestone", "crs": "ADS", "st": "09:53"},
+            ],
+        ],
+    }
+    assert _destination_from_relevant_portion(service, "WNT") == "Addlestone"
+
+
+def test_destination_from_relevant_portion_no_matching_portion():
+    """No portion contains the filter CRS; function returns None."""
+    service = {
+        "subsequentCallingPoints": [
+            [
+                {"locationName": "Putney", "crs": "PUT", "st": "09:05"},
+                {"locationName": "Barnes", "crs": "BNS", "st": "09:10"},
+                {"locationName": "Kingston", "crs": "KNG", "st": "09:30"},
+            ],
+        ],
+    }
+    assert _destination_from_relevant_portion(service, "WNT") is None
+
+
+def test_destination_from_relevant_portion_no_calling_points():
+    """Missing subsequentCallingPoints; function returns None."""
+    assert _destination_from_relevant_portion({}, "WNT") is None
+
+
+def test_destination_from_relevant_portion_last_point_missing_location_name():
+    """Last calling point has no locationName; function returns None."""
+    service = {
+        "subsequentCallingPoints": [
+            [
+                {"locationName": "Wandsworth Town", "crs": "WNT", "st": "09:09"},
+                {"crs": "WEY", "st": "09:45"},  # no locationName
+            ],
+        ],
+    }
+    assert _destination_from_relevant_portion(service, "WNT") is None
+
+
+@patch("src.clients.ldb.call_departure_board_with_details")
+@patch("src.clients.ldb.get_settings")
+def test_fetch_departures_split_service_shows_relevant_portion_destination(
+    mock_settings, mock_call
+):
+    """End-to-end: split service from WAT with filter WNT should display 'Weybridge',
+    not the API-level destination 'Addlestone'."""
+    mock_settings.return_value = _settings()
+    mock_call.return_value = {
+        "locationName": "London Waterloo",
+        "trainServices": [
+            {
+                "std": "09:00",
+                "etd": "On time",
+                "platform": "4",
+                "operator": "South Western Railway",
+                "isCancelled": False,
+                "destination": [{"locationName": "Addlestone", "crs": "ADS"}],
+                "subsequentCallingPoints": [
+                    [
+                        {"locationName": "Vauxhall", "crs": "VXH", "st": "09:05", "et": "On time"},
+                        {"locationName": "Wandsworth Town", "crs": "WNT", "st": "09:09", "et": "On time"},
+                        {"locationName": "Clapham Junction", "crs": "CLJ", "st": "09:12", "et": "On time"},
+                        {"locationName": "Weybridge", "crs": "WEY", "st": "09:45", "et": "On time"},
+                    ],
+                    [
+                        {"locationName": "Weybridge", "crs": "WEY", "st": "09:45", "et": "On time"},
+                        {"locationName": "Byfleet & New Haw", "crs": "BYF", "st": "09:49", "et": "On time"},
+                        {"locationName": "Addlestone", "crs": "ADS", "st": "09:53", "et": "On time"},
+                    ],
+                ],
+            }
+        ],
+    }
+
+    board = fetch_departures(crs="WAT", filter_crs="WNT")
+    assert len(board.departures) == 1
+    assert board.departures[0].destination == "Weybridge"
