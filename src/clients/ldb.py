@@ -315,10 +315,8 @@ def _parse_service(
     )
     delay_minutes = max(0, int((expected_time - scheduled_time).total_seconds() / 60))
 
-    destination = (
-        _destination_from_relevant_portion(service, destination_crs)
-        if destination_crs else None
-    ) or _destination_name(service)
+    destination = _destination_name(service)
+
     status = _map_status(service=service, expected_raw=expected_raw, delay_minutes=delay_minutes)
 
     arrival_time = None
@@ -336,38 +334,6 @@ def _parse_service(
         arrival_time=arrival_time,
     )
 
-
-def _destination_from_relevant_portion(service: dict, filter_crs: str) -> str | None:
-    """Return the terminal station name of the calling-points portion that contains filter_crs.
-
-    For split services the LDB API lists the furthest terminus in the top-level
-    ``destination`` field, even when only one portion of the train calls at the
-    filter station.  By finding the specific portion that contains the filter CRS
-    and reading its last calling point we get the correct terminal for the
-    passenger's journey.
-    """
-    calling_points_raw = service.get("subsequentCallingPoints")
-    if not isinstance(calling_points_raw, list):
-        return None
-
-    target = filter_crs.upper()
-    for item in calling_points_raw:
-        if isinstance(item, list):
-            portion = [p for p in item if isinstance(p, dict)]
-        elif isinstance(item, dict):
-            inner = item.get("callingPoint")
-            portion = [p for p in inner if isinstance(p, dict)] if isinstance(inner, list) else []
-        else:
-            continue
-
-        crs_values = [p.get("crs", "").upper() for p in portion]
-        if target in crs_values and portion:
-            last = portion[-1]
-            name = last.get("locationName")
-            if isinstance(name, str) and name:
-                return name
-
-    return None
 
 
 def _destination_name(service: dict) -> str:
