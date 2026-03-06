@@ -116,6 +116,35 @@ components.html(
     width=0,
 )
 
+def _swap_stations(idx: int) -> None:
+    """Swap departure and arrival station selections for route column `idx`."""
+    dep_val = st.session_state.get(f"dep_{idx}_sel")
+    arr_val = st.session_state.get(f"arr_{idx}_sel")
+    if dep_val is None or arr_val is None:
+        return
+    st.session_state[f"dep_{idx}_sel"] = arr_val
+    st.session_state[f"arr_{idx}_sel"] = dep_val
+    # Keep the ID persistence keys in sync
+    st.session_state[f"dep_{idx}"] = arr_val[1].id
+    st.session_state[f"arr_{idx}"] = dep_val[1].id
+
+
+# ── Prevent inner station-picker sub-columns from stacking on narrow screens ──
+st.markdown(
+    """
+    <style>
+    [data-testid="stColumn"] [data-testid="stHorizontalBlock"] {
+        flex-wrap: nowrap !important;
+        flex-direction: row !important;
+    }
+    [data-testid="stColumn"] [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {
+        min-width: 0;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
 columns = st.columns(len(routes))
 
 # Collect per-column selections for URL persistence after the loop.
@@ -132,26 +161,39 @@ for col_idx, (col, route) in enumerate(zip(columns, routes)):
             key=f"walk_{route.name}",
         )
 
-        # ── Departure selectbox ───────────────────────────────────────────────
+        # ── Station pickers with swap button on the left ──────────────────────
+        _btn_col, _sel_col = st.columns([1, 8])
+
         dep_init = _option_idx.get(st.session_state[f"dep_{col_idx}"], 0)
-        dep_sel = st.selectbox(
-            "Departure",
-            _options,
-            index=dep_init,
-            format_func=lambda o: o[0],
-            key=f"dep_{col_idx}_sel",
-        )
+        with _sel_col:
+            dep_sel = st.selectbox(
+                "Departure",
+                _options,
+                index=dep_init,
+                format_func=lambda o: o[0],
+                key=f"dep_{col_idx}_sel",
+            )
         dep_info: StationInfo = dep_sel[1]
 
-        # ── Arrival selectbox ─────────────────────────────────────────────────
+        with _btn_col:
+            st.markdown('<div style="height: 70px;"></div>', unsafe_allow_html=True)
+            st.button(
+                "⇅",
+                key=f"swap_{col_idx}",
+                on_click=_swap_stations,
+                args=(col_idx,),
+                help="Swap departure ↔ arrival",
+            )
+
         arr_init = _option_idx.get(st.session_state[f"arr_{col_idx}"], 0)
-        arr_sel = st.selectbox(
-            "Arrival",
-            _options,
-            index=arr_init,
-            format_func=lambda o: o[0],
-            key=f"arr_{col_idx}_sel",
-        )
+        with _sel_col:
+            arr_sel = st.selectbox(
+                "Arrival",
+                _options,
+                index=arr_init,
+                format_func=lambda o: o[0],
+                key=f"arr_{col_idx}_sel",
+            )
         arr_info: StationInfo = arr_sel[1]
 
         _col_selections.append((dep_info, arr_info))
