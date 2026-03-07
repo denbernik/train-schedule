@@ -4,9 +4,13 @@ import requests
 from datetime import datetime, timezone
 
 from src.clients.tfl import (
+    _LINE_COMPASS,
     _NO_DIRECT_ROUTE,
+    _compass_cache,
     _filter_arrivals_for_destination,
     _merge_departures_live_first,
+    _timetable_platform_name,
+    _update_compass_cache,
     fetch_departures,
 )
 from src.clients.tfl_topology import TopologyUnavailableError
@@ -478,3 +482,130 @@ def test_merge_drops_timetable_if_it_is_earlier_than_matching_live():
     assert len(merged) == 1
     assert merged[0].status == DepartureStatus.ON_TIME
     assert merged[0].expected_time == live_time
+
+
+# --- Compass cache and timetable platform name tests ---
+
+
+def test_update_compass_cache_extracts_from_live_arrivals():
+    _compass_cache.clear()
+    arrivals = [
+        {
+            "lineId": "victoria",
+            "direction": "inbound",
+            "platformName": "Southbound - Platform 4",
+            "modeName": "tube",
+        },
+        {
+            "lineId": "victoria",
+            "direction": "outbound",
+            "platformName": "Northbound - Platform 3",
+            "modeName": "tube",
+        },
+    ]
+    _update_compass_cache(arrivals)
+    assert _compass_cache["victoria"]["inbound"] == "Southbound"
+    assert _compass_cache["victoria"]["outbound"] == "Northbound"
+    _compass_cache.clear()
+
+
+def test_update_compass_cache_ignores_non_compass_directions():
+    _compass_cache.clear()
+    arrivals = [
+        {
+            "lineId": "district",
+            "direction": "inbound",
+            "platformName": "Inner Rail - Platform 1",
+            "modeName": "tube",
+        },
+    ]
+    _update_compass_cache(arrivals)
+    assert "district" not in _compass_cache
+    _compass_cache.clear()
+
+
+def test_update_compass_cache_ignores_missing_platform():
+    _compass_cache.clear()
+    arrivals = [
+        {
+            "lineId": "victoria",
+            "direction": "inbound",
+            "platformName": "",
+            "modeName": "tube",
+        },
+    ]
+    _update_compass_cache(arrivals)
+    assert "victoria" not in _compass_cache
+    _compass_cache.clear()
+
+
+def test_timetable_platform_name_uses_cache_first():
+    _compass_cache.clear()
+    _compass_cache["victoria"] = {"inbound": "Southbound"}
+    result = _timetable_platform_name("victoria", "inbound")
+    assert result == "Southbound (Timetable)"
+    _compass_cache.clear()
+
+
+def test_timetable_platform_name_falls_back_to_line_compass():
+    _compass_cache.clear()
+    result = _timetable_platform_name("district", "outbound")
+    assert result == "Westbound (Timetable)"
+
+
+def test_timetable_platform_name_cache_overrides_line_compass():
+    _compass_cache.clear()
+    # Suppose live data shows a different compass than hardcoded
+    _compass_cache["district"] = {"inbound": "Northbound"}
+    result = _timetable_platform_name("district", "inbound")
+    assert result == "Northbound (Timetable)"
+    _compass_cache.clear()
+
+
+def test_timetable_platform_name_unknown_line_returns_raw_direction():
+    _compass_cache.clear()
+    result = _timetable_platform_name("unknown-line", "inbound")
+    assert result == "Inbound (Timetable)"
+
+
+def test_timetable_platform_name_all_lines_have_both_directions():
+    """Every line in _LINE_COMPASS should have both inbound and outbound."""
+    for line_id, directions in _LINE_COMPASS.items():
+        assert "inbound" in directions, f"{line_id} missing inbound"
+        assert "outbound" in directions, f"{line_id} missing outbound"
+        assert directions["inbound"] in ("Northbound", "Southbound", "Eastbound", "Westbound")
+        assert directions["outbound"] in ("Northbound", "Southbound", "Eastbound", "Westbound")
+
+
+def test_resolve_tube_line_ids_stoppoint_fallback_filters_tube_only():
+    """StopPoint fallback should only return lines that are in _LINE_COMPASS."""
+    from unittest.mock import patch, MagicMock
+
+    # Simulate a StopPoint response with a mix of tube, bus, and NR lines
+    mock_response = MagicMock()
+    mock_response.json.return_value = {
+        "lines": [
+            {"id": "victoria"},
+            {"id": "northern"},
+            {"id": "17"},  # bus
+            {"id": "thameslink"},  # NR
+            {"id": "n91"},  # night bus
+            {"id": "piccadilly"},
+        ]
+    }
+    mock_response.raise_for_status = MagicMock()
+
+    from src.clients.tfl import _resolve_tube_line_ids
+
+    with patch("src.clients.tfl.requests.get", return_value=mock_response):
+        result = _resolve_tube_line_ids(
+            live_raw_arrivals=[],  # empty, triggers StopPoint fallback
+            station_id="940GZZLUKSX",
+            api_key="test-key",
+            timeout_seconds=10,
+        )
+
+    assert result == ["northern", "piccadilly", "victoria"]
+    assert "17" not in result
+    assert "thameslink" not in result
+    assert "n91" not in result

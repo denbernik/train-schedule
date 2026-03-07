@@ -1,3 +1,4 @@
+import html as _html
 import streamlit as st
 import streamlit.components.v1 as components
 
@@ -321,7 +322,18 @@ for col_idx, (col, route) in enumerate(zip(columns, routes)):
                 line = f"{dep.display_time} - {dep.display_arrival_time}{duration_part} → {dep.destination} {status}"
             else:
                 line = f"{dep.display_time} → {dep.destination}{timetable_marker} {status}"
-            st.write(line)
+
+            plat = dep.display_platform
+            if plat is None and dynamic_leg.api_source in ("national_rail", "transport_api"):
+                plat = "plat. TBD"
+            if plat:
+                st.markdown(
+                    f'{_html.escape(line.strip(), quote=False)}  \n'
+                    f'<span style="font-size:0.8em;opacity:0.6">{_html.escape(plat, quote=False)}</span>',
+                    unsafe_allow_html=True,
+                )
+            else:
+                st.write(line)
 
 # ── Persist all selections into the URL (survives auto-refresh and manual reload) ──
 for _i, _route in enumerate(routes):

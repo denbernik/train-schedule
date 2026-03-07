@@ -34,6 +34,28 @@ _topology_provider: TubeTopologyProvider | None = None
 _TIMETABLE_HORIZON_HOURS = 12
 _LIVE_TT_TOLERANCE_SECONDS = 60
 
+# Line-level compass mapping: line_id → {direction → compass}
+# Fixed geographic facts — TfL's inbound/outbound is consistent per line.
+# Dynamic extraction from live arrivals takes priority (see _compass_cache).
+_LINE_COMPASS: dict[str, dict[str, str]] = {
+    "bakerloo":         {"inbound": "Southbound", "outbound": "Northbound"},
+    "central":          {"inbound": "Westbound",  "outbound": "Eastbound"},
+    "circle":           {"inbound": "Westbound",  "outbound": "Eastbound"},
+    "district":         {"inbound": "Eastbound",  "outbound": "Westbound"},
+    "hammersmith-city":  {"inbound": "Westbound",  "outbound": "Eastbound"},
+    "jubilee":          {"inbound": "Westbound",  "outbound": "Eastbound"},
+    "metropolitan":     {"inbound": "Southbound", "outbound": "Northbound"},
+    "northern":         {"inbound": "Southbound", "outbound": "Northbound"},
+    "piccadilly":       {"inbound": "Eastbound",  "outbound": "Westbound"},
+    "victoria":         {"inbound": "Southbound", "outbound": "Northbound"},
+    "waterloo-city":    {"inbound": "Westbound",  "outbound": "Eastbound"},
+    "elizabeth":        {"inbound": "Westbound",  "outbound": "Eastbound"},
+}
+
+# Populated at runtime from live arrivals' platformName field.
+# Overrides _LINE_COMPASS when available (self-correcting).
+_compass_cache: dict[str, dict[str, str]] = {}
+
 # Persist station names across refreshes so the board keeps showing a human-readable
 # name even when the live arrivals list is temporarily empty (last train gone, etc.).
 _station_name_cache: dict[str, str] = {}
@@ -72,6 +94,7 @@ def fetch_departures(
 
     try:
         all_live_raw_arrivals = _call_api(station_id, settings.tfl_api_key, timeout_seconds)
+        _update_compass_cache(all_live_raw_arrivals)
         live_raw_arrivals, filter_error = _filter_arrivals_for_destination(
             raw_arrivals=all_live_raw_arrivals,
             origin_station_id=station_id,
@@ -439,6 +462,46 @@ def _fetch_timetable_candidates(
     return candidates
 
 
+def _update_compass_cache(live_raw_arrivals: list[dict]) -> None:
+    """
+    Extract (line_id, direction) → compass from live platformName strings.
+
+    Live arrivals include both ``direction`` ("inbound"/"outbound") and
+    ``platformName`` ("Southbound - Platform 4").  Parsing the compass word
+    from platformName gives us a verified mapping that we cache at module
+    level for use in timetable entries.
+    """
+    for arrival in live_raw_arrivals:
+        line_id = (arrival.get("lineId") or "").strip().lower()
+        direction = (arrival.get("direction") or "").strip().lower()
+        platform_name = arrival.get("platformName") or ""
+        if (
+            line_id
+            and direction in ("inbound", "outbound")
+            and " - Platform " in platform_name
+        ):
+            compass = platform_name.split(" - Platform ", 1)[0].strip()
+            if compass.lower() in ("northbound", "southbound", "eastbound", "westbound"):
+                _compass_cache.setdefault(line_id, {})[direction] = compass
+
+
+def _timetable_platform_name(line_id: str, direction: str) -> str:
+    """
+    Return a compass-labelled platformName for a timetable entry.
+
+    Resolution order:
+    1. _compass_cache — populated at runtime from live arrivals (self-correcting)
+    2. _LINE_COMPASS — hardcoded geographic fallback
+    3. Raw direction.title() — last resort ("Inbound" / "Outbound")
+    """
+    compass = _compass_cache.get(line_id, {}).get(direction)
+    if not compass:
+        compass = _LINE_COMPASS.get(line_id, {}).get(direction)
+    if compass:
+        return f"{compass} (Timetable)"
+    return f"{direction.title()} (Timetable)"
+
+
 def _parse_timetable_response_to_arrivals(
     payload: dict,
     line_id: str,
@@ -511,7 +574,7 @@ def _parse_timetable_response_to_arrivals(
                         "destinationNaptanId": terminal_station_id,
                         "destinationName": destination_name,
                         "expectedArrival": departure_dt.isoformat(),
-                        "platformName": f"{direction.title()} (Timetable)",
+                        "platformName": _timetable_platform_name(line_id, direction),
                         "direction": direction,
                     }
                 )
@@ -916,13 +979,15 @@ def _resolve_tube_line_ids(
         resp = requests.get(url, params=params, timeout=timeout_seconds)
         resp.raise_for_status()
         lines = resp.json().get("lines", [])
-        fallback_ids = sorted(
-            {
-                line.get("id", "").strip().lower()
-                for line in lines
-                if isinstance(line.get("id"), str) and line.get("id", "").strip()
-            }
-        )
+        raw_ids = {
+            line.get("id", "").strip().lower()
+            for line in lines
+            if isinstance(line.get("id"), str) and line.get("id", "").strip()
+        }
+        # Filter to known tube lines only — StopPoint returns ALL modes
+        # (buses, NR, DLR, etc.) and querying timetables for non-tube lines
+        # produces floods of 404 errors.
+        fallback_ids = sorted(raw_ids & set(_LINE_COMPASS))
         if fallback_ids:
             logger.debug(
                 "TfL StopPoint line fallback for %s: %s", station_id, fallback_ids

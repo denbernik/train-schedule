@@ -62,6 +62,15 @@ def api_source_for(station_type: StationType) -> str:
     return _API_SOURCE_MAP[station_type]
 
 
+# Compass direction → short abbreviation used on platform labels
+_DIRECTION_ABBR: dict[str, str] = {
+    "eastbound":  "E/B",
+    "westbound":  "W/B",
+    "northbound": "N/B",
+    "southbound": "S/B",
+}
+
+
 @dataclass
 class Departure:
     """
@@ -128,6 +137,39 @@ class Departure:
         if hours >= 1:
             return f"{hours} h {mins} min" if mins else f"{hours} h"
         return f"{mins} min"
+
+    @property
+    def display_platform(self) -> str | None:
+        """
+        Human-readable platform label, or None when unavailable/synthetic.
+
+        TfL live:      "Eastbound - Platform 1"  →  "plat. 1 - E/B"
+        TfL timetable: "Outbound (Timetable)"    →  None  (hide synthetic label)
+        National Rail: "2" / "3A"               →  "plat. 2" / "plat. 3A"
+        Direction only: "Inbound"               →  "Inbound"
+        """
+        if not self.platform:
+            return None
+        p = self.platform.strip()
+        if not p:
+            return None
+        if "(Timetable)" in p:
+            direction = p.replace("(Timetable)", "").strip()
+            if direction.lower() in {
+                "eastbound", "westbound", "northbound", "southbound", "inbound", "outbound"
+            }:
+                return _DIRECTION_ABBR.get(direction.lower(), direction)
+            return None
+        # TfL live format: "Direction - Platform N"
+        if " - Platform " in p:
+            direction, number = p.split(" - Platform ", 1)
+            abbr = _DIRECTION_ABBR.get(direction.strip().lower(), direction.strip())
+            return f"plat. {number.strip()} - {abbr}"
+        # Plain direction word with no platform number (e.g. "Inbound", "Outbound")
+        if p.lower() in {"eastbound", "westbound", "northbound", "southbound", "inbound", "outbound"}:
+            return _DIRECTION_ABBR.get(p.lower(), p)
+        # National Rail: numeric or alphanumeric (e.g. "2", "3A")
+        return f"plat. {p}"
 
     @property
     def minutes_until(self) -> int | None:

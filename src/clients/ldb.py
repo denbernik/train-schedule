@@ -315,7 +315,13 @@ def _parse_service(
     )
     delay_minutes = max(0, int((expected_time - scheduled_time).total_seconds() / 60))
 
-    destination = _destination_name(service)
+    if destination_crs:
+        destination = (
+            _destination_from_relevant_portion(service, destination_crs)
+            or _destination_name(service)
+        )
+    else:
+        destination = _destination_name(service)
 
     status = _map_status(service=service, expected_raw=expected_raw, delay_minutes=delay_minutes)
 
@@ -334,6 +340,38 @@ def _parse_service(
         arrival_time=arrival_time,
     )
 
+
+
+def _destination_from_relevant_portion(service: dict, filter_crs: str) -> str | None:
+    """
+    Return the locationName of the last calling point in the portion containing
+    filter_crs, handling both flat-list and wrapped-dict schemas.
+
+    For split services (multiple portions in subsequentCallingPoints), this
+    returns the terminus of the relevant portion rather than the train's overall
+    final destination. E.g. for WAT→WNT on a Weybridge/Addlestone split, this
+    returns "Weybridge" (end of the WNT portion), not "Addlestone".
+    """
+    calling_points_raw = service.get("subsequentCallingPoints")
+    if not isinstance(calling_points_raw, list):
+        return None
+
+    target = filter_crs.upper()
+    for item in calling_points_raw:
+        if isinstance(item, list):
+            portion = [p for p in item if isinstance(p, dict)]
+        elif isinstance(item, dict):
+            inner = item.get("callingPoint")
+            portion = [p for p in inner if isinstance(p, dict)] if isinstance(inner, list) else []
+        else:
+            continue
+
+        if any(isinstance(p.get("crs"), str) and p["crs"].upper() == target for p in portion):
+            last = portion[-1]
+            name = last.get("locationName")
+            return name if isinstance(name, str) else None
+
+    return None
 
 
 def _destination_name(service: dict) -> str:

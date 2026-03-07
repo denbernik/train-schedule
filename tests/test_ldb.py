@@ -558,3 +558,192 @@ def test_fetch_departures_split_service_shows_relevant_portion_destination(
     board = fetch_departures(crs="WAT", filter_crs="WNT")
     assert len(board.departures) == 1
     assert board.departures[0].destination == "Weybridge"
+
+
+# --- display_platform model tests ---
+
+def _dep(**kwargs) -> Departure:
+    """Helper: minimal Departure with overrideable fields."""
+    defaults = dict(
+        destination="London Waterloo",
+        scheduled_time=datetime(2025, 6, 15, 14, 23),
+        expected_time=datetime(2025, 6, 15, 14, 23),
+        status=DepartureStatus.ON_TIME,
+    )
+    return Departure(**{**defaults, **kwargs})
+
+
+# National Rail numeric / alphanumeric platforms
+def test_display_platform_nr_numeric():
+    assert _dep(platform="2").display_platform == "plat. 2"
+
+def test_display_platform_nr_alphanumeric():
+    assert _dep(platform="3A").display_platform == "plat. 3A"
+
+def test_display_platform_nr_two_digits():
+    assert _dep(platform="12").display_platform == "plat. 12"
+
+# TfL live compass + platform
+def test_display_platform_tfl_eastbound():
+    assert _dep(platform="Eastbound - Platform 1").display_platform == "plat. 1 - E/B"
+
+def test_display_platform_tfl_westbound():
+    assert _dep(platform="Westbound - Platform 3").display_platform == "plat. 3 - W/B"
+
+def test_display_platform_tfl_northbound():
+    assert _dep(platform="Northbound - Platform 2").display_platform == "plat. 2 - N/B"
+
+def test_display_platform_tfl_southbound():
+    assert _dep(platform="Southbound - Platform 4").display_platform == "plat. 4 - S/B"
+
+# TfL compass direction only (no platform number)
+def test_display_platform_direction_only_eastbound():
+    assert _dep(platform="Eastbound").display_platform == "E/B"
+
+def test_display_platform_direction_only_westbound():
+    assert _dep(platform="Westbound").display_platform == "W/B"
+
+# TfL timetable entries — direction is surfaced, not hidden
+def test_display_platform_timetable_outbound():
+    assert _dep(platform="Outbound (Timetable)").display_platform == "Outbound"
+
+def test_display_platform_timetable_inbound():
+    assert _dep(platform="Inbound (Timetable)").display_platform == "Inbound"
+
+# TfL timetable entries with compass directions (new: line-level compass map)
+def test_display_platform_timetable_southbound():
+    assert _dep(platform="Southbound (Timetable)").display_platform == "S/B"
+
+def test_display_platform_timetable_northbound():
+    assert _dep(platform="Northbound (Timetable)").display_platform == "N/B"
+
+def test_display_platform_timetable_eastbound():
+    assert _dep(platform="Eastbound (Timetable)").display_platform == "E/B"
+
+def test_display_platform_timetable_westbound():
+    assert _dep(platform="Westbound (Timetable)").display_platform == "W/B"
+
+# Absent / empty
+def test_display_platform_none():
+    assert _dep(platform=None).display_platform is None
+
+def test_display_platform_empty_string():
+    assert _dep(platform="").display_platform is None
+
+
+# --- platform integration tests (end-to-end via fetch_departures) ---
+
+@patch("src.clients.ldb.call_departure_board_with_details")
+@patch("src.clients.ldb.get_settings")
+def test_platform_preserved_from_api_response(mock_settings, mock_call):
+    """Platform field from GetDepBoardWithDetails passes through to Departure.platform."""
+    mock_settings.return_value = _settings()
+    mock_call.return_value = {
+        "trainServices": [{
+            "std": "09:00",
+            "etd": "On time",
+            "platform": "4",
+            "operator": "South Western Railway",
+            "isCancelled": False,
+            "destination": [{"locationName": "Vauxhall", "crs": "VXH"}],
+            "subsequentCallingPoints": [[
+                {"locationName": "Vauxhall", "crs": "VXH", "st": "09:05", "et": "On time"},
+            ]],
+        }],
+    }
+    board = fetch_departures(crs="WAT", filter_crs="VXH")
+    assert board.departures[0].platform == "4"
+    assert board.departures[0].display_platform == "plat. 4"
+
+
+@patch("src.clients.ldb.call_departure_board_with_details")
+@patch("src.clients.ldb.get_settings")
+def test_platform_none_when_absent(mock_settings, mock_call):
+    """When platform key is absent (Waterloo late-allocation), platform is None."""
+    mock_settings.return_value = _settings()
+    mock_call.return_value = {
+        "trainServices": [{
+            "std": "09:00",
+            "etd": "On time",
+            "operator": "South Western Railway",
+            "isCancelled": False,
+            "destination": [{"locationName": "Vauxhall", "crs": "VXH"}],
+            "subsequentCallingPoints": [[
+                {"locationName": "Vauxhall", "crs": "VXH", "st": "09:05", "et": "On time"},
+            ]],
+        }],
+    }
+    board = fetch_departures(crs="WAT", filter_crs="VXH")
+    assert board.departures[0].platform is None
+    assert board.departures[0].display_platform is None
+
+
+@patch("src.clients.ldb.call_departure_board_with_details")
+@patch("src.clients.ldb.get_settings")
+def test_split_service_correct_destination_and_platform(mock_settings, mock_call):
+    """Split service: destination is Weybridge (not Addlestone) AND platform is preserved."""
+    mock_settings.return_value = _settings()
+    mock_call.return_value = {
+        "trainServices": [{
+            "std": "09:00",
+            "etd": "On time",
+            "platform": "4",
+            "operator": "South Western Railway",
+            "isCancelled": False,
+            "destination": [{"locationName": "Addlestone", "crs": "ADS"}],
+            "subsequentCallingPoints": [
+                [
+                    {"locationName": "Vauxhall", "crs": "VXH", "st": "09:05", "et": "On time"},
+                    {"locationName": "Wandsworth Town", "crs": "WNT", "st": "09:09", "et": "On time"},
+                    {"locationName": "Weybridge", "crs": "WEY", "st": "09:45", "et": "On time"},
+                ],
+                [
+                    {"locationName": "Weybridge", "crs": "WEY", "st": "09:45", "et": "On time"},
+                    {"locationName": "Byfleet & New Haw", "crs": "BYF", "st": "09:49", "et": "On time"},
+                    {"locationName": "Addlestone", "crs": "ADS", "st": "09:53", "et": "On time"},
+                ],
+            ],
+        }],
+    }
+    board = fetch_departures(crs="WAT", filter_crs="WNT")
+    dep = board.departures[0]
+    assert dep.destination == "Weybridge"
+    assert dep.platform == "4"
+    assert dep.display_platform == "plat. 4"
+
+
+@patch("src.clients.ldb.call_departure_board_with_details")
+@patch("src.clients.ldb.get_settings")
+def test_multiple_trains_mixed_platform_presence(mock_settings, mock_call):
+    """Multiple trains: platform shown where present, None where absent."""
+    mock_settings.return_value = _settings()
+    mock_call.return_value = {
+        "trainServices": [
+            {
+                "std": "09:00",
+                "etd": "On time",
+                "platform": "4",
+                "operator": "South Western Railway",
+                "isCancelled": False,
+                "destination": [{"locationName": "Vauxhall", "crs": "VXH"}],
+                "subsequentCallingPoints": [[
+                    {"locationName": "Vauxhall", "crs": "VXH", "st": "09:05", "et": "On time"},
+                ]],
+            },
+            {
+                "std": "09:15",
+                "etd": "On time",
+                "operator": "South Western Railway",
+                "isCancelled": False,
+                "destination": [{"locationName": "Vauxhall", "crs": "VXH"}],
+                "subsequentCallingPoints": [[
+                    {"locationName": "Vauxhall", "crs": "VXH", "st": "09:20", "et": "On time"},
+                ]],
+            },
+        ],
+    }
+    board = fetch_departures(crs="WAT", filter_crs="VXH")
+    assert board.departures[0].platform == "4"
+    assert board.departures[0].display_platform == "plat. 4"
+    assert board.departures[1].platform is None
+    assert board.departures[1].display_platform is None
