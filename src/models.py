@@ -177,7 +177,12 @@ class Departure:
         Minutes until departure from right now.
         Returns None if the departure is in the past (already gone).
         """
-        delta = self.expected_time - datetime.now()
+        now = (
+            datetime.now(self.expected_time.tzinfo)
+            if self.expected_time.tzinfo is not None
+            else datetime.now()
+        )
+        delta = self.expected_time - now
         minutes = int(delta.total_seconds() / 60)
         return minutes if minutes >= 0 else None
 

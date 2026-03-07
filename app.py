@@ -175,10 +175,181 @@ st.markdown(
         > [data-testid="stColumn"] {
         min-width: 0 !important;
     }
+    /* ── Departure card styles ────────────────────────────────────────── */
+    .dep-card {
+        border-left: 3px solid rgba(100, 200, 100, 0.5);
+        padding: 8px 10px 6px 10px;
+        margin-bottom: 6px;
+        border-radius: 0 6px 6px 0;
+        background: rgba(255, 255, 255, 0.03);
+    }
+    .dep-card--delayed {
+        border-left-color: rgba(255, 180, 50, 0.8);
+        background: rgba(255, 180, 50, 0.06);
+    }
+    .dep-card--cancelled {
+        border-left-color: rgba(255, 70, 70, 0.8);
+        background: rgba(255, 70, 70, 0.06);
+    }
+    .dep-card--timetable {
+        border-left-color: rgba(150, 150, 150, 0.35);
+        background: rgba(255, 255, 255, 0.015);
+    }
+    .dep-main {
+        display: flex;
+        align-items: baseline;
+        gap: 4px;
+        flex-wrap: wrap;
+    }
+    .dep-time {
+        font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
+        font-size: 0.95em;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+    .dep-dest {
+        font-weight: 500;
+        flex: 1;
+        min-width: 0;
+    }
+    .dep-dest--cancelled {
+        text-decoration: line-through;
+        opacity: 0.5;
+    }
+    .dep-mins {
+        font-size: 0.75em;
+        font-weight: 600;
+        padding: 1px 6px;
+        border-radius: 8px;
+        background: rgba(100, 200, 100, 0.15);
+        color: rgba(100, 220, 100, 0.9);
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+    .dep-mins--rush {
+        background: rgba(255, 70, 70, 0.15);
+        color: rgba(255, 120, 120, 0.9);
+    }
+    .dep-mins--soon {
+        background: rgba(255, 180, 50, 0.15);
+        color: rgba(255, 200, 80, 0.9);
+    }
+    .dep-details {
+        display: flex;
+        align-items: baseline;
+        gap: 6px;
+        margin-top: 2px;
+        font-size: 0.78em;
+        opacity: 0.55;
+        flex-wrap: wrap;
+    }
+    .dep-sep {
+        opacity: 0.35;
+    }
+    .dep-plat {
+        font-weight: 600;
+        opacity: 1.0;
+        padding: 0 5px;
+        border-radius: 4px;
+        background: rgba(255, 255, 255, 0.07);
+        white-space: nowrap;
+    }
+    .dep-status {
+        font-weight: 600;
+    }
+    .dep-status--delayed {
+        color: rgba(255, 180, 50, 0.9);
+        opacity: 1.0;
+    }
+    .dep-status--cancelled {
+        color: rgba(255, 70, 70, 0.9);
+        opacity: 1.0;
+    }
+    .dep-timetable-tag {
+        font-size: 0.85em;
+        opacity: 0.5;
+        font-style: italic;
+    }
     </style>
     """,
     unsafe_allow_html=True,
 )
+
+def _render_departure_html(
+    dep: "Departure",
+    is_tfl: bool,
+    walking_time: int,
+    plat_override: str | None = None,
+) -> str:
+    """Build styled HTML for a single departure card."""
+    e = _html.escape
+
+    # ── Card modifier class ──
+    is_timetable = is_tfl and dep.status == DepartureStatus.NO_REPORT
+    if dep.is_cancelled:
+        card_cls = "dep-card dep-card--cancelled"
+    elif dep.is_delayed:
+        card_cls = "dep-card dep-card--delayed"
+    elif is_timetable:
+        card_cls = "dep-card dep-card--timetable"
+    else:
+        card_cls = "dep-card"
+
+    # ── Main line: departure time → destination + minutes badge ──
+    time_part = e(dep.display_time)
+    dest_cls = "dep-dest dep-dest--cancelled" if dep.is_cancelled else "dep-dest"
+    dest_text = e(dep.destination)
+    if is_timetable:
+        dest_text += ' <span class="dep-timetable-tag">sched.</span>'
+
+    # ── Minutes-until badge ──
+    mins = dep.minutes_until
+    mins_html = ""
+    if mins is not None and not dep.is_cancelled:
+        if mins <= walking_time:
+            mins_cls = "dep-mins dep-mins--rush"
+        elif mins <= walking_time + 3:
+            mins_cls = "dep-mins dep-mins--soon"
+        else:
+            mins_cls = "dep-mins"
+        mins_html = f'<span class="{mins_cls}">{mins} min</span>'
+
+    # ── Details line: arrival info + platform + status + operator ──
+    details_parts: list[str] = []
+
+    if dep.display_arrival_time:
+        arr_text = f"arr. {e(dep.display_arrival_time)}"
+        if dep.display_duration:
+            arr_text += f" ({e(dep.display_duration)})"
+        details_parts.append(f'<span>{arr_text}</span>')
+
+    plat = plat_override if plat_override is not None else dep.display_platform
+    if plat:
+        details_parts.append(f'<span class="dep-plat">{e(plat)}</span>')
+
+    if dep.is_delayed:
+        details_parts.append(f'<span class="dep-status dep-status--delayed">{e(dep.status.value)}</span>')
+    elif dep.is_cancelled:
+        details_parts.append(f'<span class="dep-status dep-status--cancelled">{e(dep.status.value)}</span>')
+
+    if dep.operator:
+        details_parts.append(f'<span>{e(dep.operator)}</span>')
+
+    details_html = ' <span class="dep-sep">·</span> '.join(details_parts)
+    details_line = f'<div class="dep-details">{details_html}</div>' if details_html else ""
+
+    return (
+        f'<div class="{card_cls}">'
+        f'  <div class="dep-main">'
+        f'    <span class="dep-time">{time_part}</span>'
+        f'    <span style="opacity:0.4">→</span>'
+        f'    <span class="{dest_cls}">{dest_text}</span>'
+        f'    {mins_html}'
+        f'  </div>'
+        f'  {details_line}'
+        f'</div>'
+    )
+
 
 columns = st.columns(len(routes))
 
@@ -310,30 +481,17 @@ for col_idx, (col, route) in enumerate(zip(columns, routes)):
             walking_time_minutes=walking_time,
             max_rows=_FINAL_DISPLAY_ROWS,
         )
+        is_tfl = dynamic_leg.api_source == "tfl"
+        cards_html: list[str] = []
         for dep in visible_departures:
-            status = f"({dep.status.value})" if dep.is_delayed or dep.is_cancelled else ""
-            timetable_marker = (
-                " *"
-                if dynamic_leg.api_source == "tfl" and dep.status == DepartureStatus.NO_REPORT
-                else ""
+            plat_override: str | None = None
+            if dep.display_platform is None and not is_tfl:
+                plat_override = "plat. TBD"
+            cards_html.append(
+                _render_departure_html(dep, is_tfl, walking_time, plat_override)
             )
-            if dep.display_arrival_time:
-                duration_part = f" ({dep.display_duration})" if dep.display_duration else ""
-                line = f"{dep.display_time} - {dep.display_arrival_time}{duration_part} → {dep.destination} {status}"
-            else:
-                line = f"{dep.display_time} → {dep.destination}{timetable_marker} {status}"
-
-            plat = dep.display_platform
-            if plat is None and dynamic_leg.api_source in ("national_rail", "transport_api"):
-                plat = "plat. TBD"
-            if plat:
-                st.markdown(
-                    f'{_html.escape(line.strip(), quote=False)}  \n'
-                    f'<span style="font-size:0.8em;opacity:0.6">{_html.escape(plat, quote=False)}</span>',
-                    unsafe_allow_html=True,
-                )
-            else:
-                st.write(line)
+        if cards_html:
+            st.markdown("\n".join(cards_html), unsafe_allow_html=True)
 
 # ── Persist all selections into the URL (survives auto-refresh and manual reload) ──
 for _i, _route in enumerate(routes):
