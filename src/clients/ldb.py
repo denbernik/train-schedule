@@ -59,6 +59,7 @@ def fetch_departures(
                     crs,
                 )
                 payload = call_departure_board(**call_kwargs)
+                destination_crs = filter_crs
         else:
             payload = call_departure_board(**call_kwargs)
 
@@ -286,7 +287,8 @@ def _parse_departures(
     departures: list[Departure] = []
     today = date.today()
     for service in services:
-        if destination_crs and not _has_destination_in_calling_points(service, destination_crs):
+        has_calling_points = isinstance(service.get("subsequentCallingPoints"), list)
+        if destination_crs and has_calling_points and not _has_destination_in_calling_points(service, destination_crs):
             logger.debug(
                 "Skipping service %s: %s not in subsequentCallingPoints",
                 service.get("std", "?"),
@@ -349,14 +351,22 @@ def _destination_from_relevant_portion(service: dict, filter_crs: str) -> str | 
 
     For split services (multiple portions in subsequentCallingPoints), this
     returns the terminus of the relevant portion rather than the train's overall
-    final destination. E.g. for WAT→WNT on a Weybridge/Addlestone split, this
-    returns "Weybridge" (end of the WNT portion), not "Addlestone".
+    final destination — but only when filter_crs is clearly AFTER the split
+    point (i.e. on a specific branch).
+
+    When filter_crs is before the split point, returns None so the caller falls
+    through to the service-level destination.  A station is detected as
+    pre-split when a station that appears AFTER it in the matching portion also
+    exists in another portion (indicating the split hasn't happened yet).
     """
     calling_points_raw = service.get("subsequentCallingPoints")
     if not isinstance(calling_points_raw, list):
         return None
 
     target = filter_crs.upper()
+
+    # Parse all portions.
+    portions: list[list[dict]] = []
     for item in calling_points_raw:
         if isinstance(item, list):
             portion = [p for p in item if isinstance(p, dict)]
@@ -365,13 +375,60 @@ def _destination_from_relevant_portion(service: dict, filter_crs: str) -> str | 
             portion = [p for p in inner if isinstance(p, dict)] if isinstance(inner, list) else []
         else:
             continue
+        if portion:
+            portions.append(portion)
 
+    # Find portions containing filter_crs.
+    matching_indices: list[int] = []
+    for idx, portion in enumerate(portions):
         if any(isinstance(p.get("crs"), str) and p["crs"].upper() == target for p in portion):
-            last = portion[-1]
-            name = last.get("locationName")
-            return name if isinstance(name, str) else None
+            matching_indices.append(idx)
 
-    return None
+    if not matching_indices:
+        return None
+
+    # Multiple portions contain filter_crs — ambiguous, use API destination.
+    if len(matching_indices) > 1:
+        return None
+
+    matched = portions[matching_indices[0]]
+
+    # Single portion overall — no split, return its terminus.
+    if len(portions) == 1:
+        last = matched[-1]
+        name = last.get("locationName")
+        return name if isinstance(name, str) else None
+
+    # Split service: determine if filter_crs is before or after the split.
+    # Collect CRS codes from all OTHER portions.
+    other_crs: set[str] = set()
+    for idx, portion in enumerate(portions):
+        if idx != matching_indices[0]:
+            for p in portion:
+                crs = p.get("crs")
+                if isinstance(crs, str):
+                    other_crs.add(crs.upper())
+
+    # Find position of filter_crs in the matching portion.
+    filter_pos = -1
+    for i, p in enumerate(matched):
+        crs = p.get("crs")
+        if isinstance(crs, str) and crs.upper() == target:
+            filter_pos = i
+            break
+
+    # If any station AFTER filter_crs also appears in another portion,
+    # filter_crs is before the split — fall through to API destination.
+    if filter_pos >= 0:
+        for i in range(filter_pos + 1, len(matched)):
+            crs = matched[i].get("crs")
+            if isinstance(crs, str) and crs.upper() in other_crs:
+                return None
+
+    # filter_crs is after the split — return this portion's terminus.
+    last = matched[-1]
+    name = last.get("locationName")
+    return name if isinstance(name, str) else None
 
 
 def _destination_name(service: dict) -> str:

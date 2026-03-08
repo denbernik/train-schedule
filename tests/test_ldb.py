@@ -427,8 +427,8 @@ def test_display_duration_none_when_no_arrival():
 # --- _destination_from_relevant_portion tests ---
 
 def test_destination_from_relevant_portion_split_service_flat_list():
-    """Split service: portion containing filter CRS terminates at Weybridge;
-    other portion continues to Addlestone. Should return 'Weybridge', not 'Addlestone'."""
+    """Split service: WNT is before the split point (Weybridge appears in both
+    portions), so function returns None to let the caller use the API destination."""
     service = {
         "destination": [{"locationName": "Addlestone", "crs": "ADS"}],
         "subsequentCallingPoints": [
@@ -445,11 +445,11 @@ def test_destination_from_relevant_portion_split_service_flat_list():
             ],
         ],
     }
-    assert _destination_from_relevant_portion(service, "WNT") == "Weybridge"
+    assert _destination_from_relevant_portion(service, "WNT") is None
 
 
 def test_destination_from_relevant_portion_split_service_wrapped_shape():
-    """Same split-service scenario but with wrapped callingPoint dicts."""
+    """Same pre-split scenario but with wrapped callingPoint dicts."""
     service = {
         "destination": [{"locationName": "Addlestone", "crs": "ADS"}],
         "subsequentCallingPoints": [
@@ -466,7 +466,29 @@ def test_destination_from_relevant_portion_split_service_wrapped_shape():
             ]},
         ],
     }
-    assert _destination_from_relevant_portion(service, "WNT") == "Weybridge"
+    assert _destination_from_relevant_portion(service, "WNT") is None
+
+
+def test_destination_from_relevant_portion_post_split_returns_terminus():
+    """When filter_crs is AFTER the split point (no shared stations after it
+    in other portions), return the branch terminus."""
+    service = {
+        "subsequentCallingPoints": [
+            [
+                {"locationName": "Vauxhall", "crs": "VXH", "st": "09:05"},
+                {"locationName": "Wandsworth Town", "crs": "WNT", "st": "09:09"},
+                {"locationName": "Weybridge", "crs": "WEY", "st": "09:45"},
+                {"locationName": "Byfleet & New Haw", "crs": "BYF", "st": "09:49"},
+                {"locationName": "Addlestone", "crs": "ADS", "st": "09:53"},
+            ],
+            [
+                {"locationName": "Weybridge", "crs": "WEY", "st": "09:45"},
+                {"locationName": "Woking", "crs": "WOK", "st": "09:58"},
+            ],
+        ],
+    }
+    # BYF is after the split (Weybridge) — only on the Addlestone branch
+    assert _destination_from_relevant_portion(service, "BYF") == "Addlestone"
 
 
 def test_destination_from_relevant_portion_through_service_to_addlestone():
@@ -520,13 +542,156 @@ def test_destination_from_relevant_portion_last_point_missing_location_name():
     assert _destination_from_relevant_portion(service, "WNT") is None
 
 
+def test_destination_from_relevant_portion_multi_portion_match_returns_none():
+    """When filter_crs appears in multiple portions (station is before the split),
+    function returns None so caller falls through to the API-level destination."""
+    service = {
+        "destination": [
+            {"locationName": "Woking", "crs": "WOK"},
+            {"locationName": "Addlestone", "crs": "ADS"},
+        ],
+        "subsequentCallingPoints": [
+            [
+                {"locationName": "Wandsworth Town", "crs": "WNT", "st": "09:09"},
+                {"locationName": "Clapham Junction", "crs": "CLJ", "st": "09:12"},
+                {"locationName": "Weybridge", "crs": "WEY", "st": "09:45"},
+                {"locationName": "Addlestone", "crs": "ADS", "st": "09:53"},
+            ],
+            [
+                {"locationName": "Wandsworth Town", "crs": "WNT", "st": "09:09"},
+                {"locationName": "Clapham Junction", "crs": "CLJ", "st": "09:12"},
+                {"locationName": "Weybridge", "crs": "WEY", "st": "09:45"},
+                {"locationName": "Woking", "crs": "WOK", "st": "09:58"},
+            ],
+        ],
+    }
+    assert _destination_from_relevant_portion(service, "WNT") is None
+
+
+def test_destination_from_relevant_portion_multi_portion_match_wrapped_returns_none():
+    """Same as above but with wrapped callingPoint dict format."""
+    service = {
+        "subsequentCallingPoints": [
+            {"callingPoint": [
+                {"locationName": "Wandsworth Town", "crs": "WNT", "st": "09:09"},
+                {"locationName": "Clapham Junction", "crs": "CLJ", "st": "09:12"},
+                {"locationName": "Addlestone", "crs": "ADS", "st": "09:53"},
+            ]},
+            {"callingPoint": [
+                {"locationName": "Wandsworth Town", "crs": "WNT", "st": "09:09"},
+                {"locationName": "Clapham Junction", "crs": "CLJ", "st": "09:12"},
+                {"locationName": "Woking", "crs": "WOK", "st": "09:58"},
+            ]},
+        ],
+    }
+    assert _destination_from_relevant_portion(service, "WNT") is None
+
+
 @patch("src.clients.ldb.call_departure_board_with_details")
 @patch("src.clients.ldb.get_settings")
-def test_fetch_departures_split_service_shows_relevant_portion_destination(
+def test_split_service_consistent_destination_regardless_of_origin(
     mock_settings, mock_call
 ):
-    """End-to-end: split service from WAT with filter WNT should display 'Weybridge',
-    not the API-level destination 'Addlestone'."""
+    """The same split service should show the same destination whether queried
+    from WAT or VXH. When filter_crs (WNT) is before the split point and
+    appears in multiple portions, fall through to the API destination field."""
+    mock_settings.return_value = _settings()
+
+    # Simulate querying from WAT: API puts Addlestone branch first
+    mock_call.return_value = {
+        "locationName": "London Waterloo",
+        "trainServices": [{
+            "std": "09:00",
+            "etd": "On time",
+            "platform": "4",
+            "operator": "South Western Railway",
+            "isCancelled": False,
+            "destination": [{"locationName": "Woking", "crs": "WOK"}],
+            "subsequentCallingPoints": [
+                [
+                    {"locationName": "Vauxhall", "crs": "VXH", "st": "09:05", "et": "On time"},
+                    {"locationName": "Wandsworth Town", "crs": "WNT", "st": "09:09", "et": "On time"},
+                    {"locationName": "Weybridge", "crs": "WEY", "st": "09:45", "et": "On time"},
+                    {"locationName": "Addlestone", "crs": "ADS", "st": "09:53", "et": "On time"},
+                ],
+                [
+                    {"locationName": "Vauxhall", "crs": "VXH", "st": "09:05", "et": "On time"},
+                    {"locationName": "Wandsworth Town", "crs": "WNT", "st": "09:09", "et": "On time"},
+                    {"locationName": "Weybridge", "crs": "WEY", "st": "09:45", "et": "On time"},
+                    {"locationName": "Woking", "crs": "WOK", "st": "09:58", "et": "On time"},
+                ],
+            ],
+        }],
+    }
+    board_from_wat = fetch_departures(crs="WAT", filter_crs="WNT")
+
+    # Simulate querying from VXH: API puts Woking branch first
+    mock_call.return_value = {
+        "locationName": "Vauxhall",
+        "trainServices": [{
+            "std": "09:05",
+            "etd": "On time",
+            "platform": "2",
+            "operator": "South Western Railway",
+            "isCancelled": False,
+            "destination": [{"locationName": "Woking", "crs": "WOK"}],
+            "subsequentCallingPoints": [
+                [
+                    {"locationName": "Wandsworth Town", "crs": "WNT", "st": "09:09", "et": "On time"},
+                    {"locationName": "Weybridge", "crs": "WEY", "st": "09:45", "et": "On time"},
+                    {"locationName": "Woking", "crs": "WOK", "st": "09:58", "et": "On time"},
+                ],
+                [
+                    {"locationName": "Wandsworth Town", "crs": "WNT", "st": "09:09", "et": "On time"},
+                    {"locationName": "Weybridge", "crs": "WEY", "st": "09:45", "et": "On time"},
+                    {"locationName": "Addlestone", "crs": "ADS", "st": "09:53", "et": "On time"},
+                ],
+            ],
+        }],
+    }
+    board_from_vxh = fetch_departures(crs="VXH", filter_crs="WNT")
+
+    # Both should show "Woking" (the API-level destination)
+    assert board_from_wat.departures[0].destination == "Woking"
+    assert board_from_vxh.departures[0].destination == "Woking"
+    assert board_from_wat.departures[0].destination == board_from_vxh.departures[0].destination
+
+
+@patch("src.clients.ldb.call_departure_board")
+@patch("src.clients.ldb.call_departure_board_with_details")
+@patch("src.clients.ldb.get_settings")
+def test_fetch_departures_fallback_keeps_services_without_calling_points(
+    mock_settings, mock_with_details, mock_basic
+):
+    """When GetDepBoardWithDetails fails, services without subsequentCallingPoints
+    should still be included (the basic endpoint already filtered server-side)."""
+    mock_settings.return_value = _settings()
+    mock_with_details.side_effect = LdbApiError("not available")
+    mock_basic.return_value = {
+        "locationName": "London Waterloo",
+        "trainServices": [
+            {
+                "std": "09:00",
+                "etd": "On time",
+                "platform": "4",
+                "operator": "South Western Railway",
+                "isCancelled": False,
+                "destination": [{"locationName": "Woking", "crs": "WOK"}],
+            }
+        ],
+    }
+    board = fetch_departures(crs="WAT", filter_crs="WNT")
+    assert len(board.departures) == 1
+    assert board.departures[0].destination == "Woking"
+
+
+@patch("src.clients.ldb.call_departure_board_with_details")
+@patch("src.clients.ldb.get_settings")
+def test_fetch_departures_split_service_pre_split_uses_api_destination(
+    mock_settings, mock_call
+):
+    """End-to-end: split service from WAT with filter WNT — WNT is before the
+    split point (Weybridge shared), so the API-level destination is used."""
     mock_settings.return_value = _settings()
     mock_call.return_value = {
         "locationName": "London Waterloo",
@@ -537,18 +702,18 @@ def test_fetch_departures_split_service_shows_relevant_portion_destination(
                 "platform": "4",
                 "operator": "South Western Railway",
                 "isCancelled": False,
-                "destination": [{"locationName": "Addlestone", "crs": "ADS"}],
+                "destination": [{"locationName": "Woking", "crs": "WOK"}],
                 "subsequentCallingPoints": [
                     [
                         {"locationName": "Vauxhall", "crs": "VXH", "st": "09:05", "et": "On time"},
                         {"locationName": "Wandsworth Town", "crs": "WNT", "st": "09:09", "et": "On time"},
                         {"locationName": "Clapham Junction", "crs": "CLJ", "st": "09:12", "et": "On time"},
                         {"locationName": "Weybridge", "crs": "WEY", "st": "09:45", "et": "On time"},
+                        {"locationName": "Addlestone", "crs": "ADS", "st": "09:53", "et": "On time"},
                     ],
                     [
                         {"locationName": "Weybridge", "crs": "WEY", "st": "09:45", "et": "On time"},
-                        {"locationName": "Byfleet & New Haw", "crs": "BYF", "st": "09:49", "et": "On time"},
-                        {"locationName": "Addlestone", "crs": "ADS", "st": "09:53", "et": "On time"},
+                        {"locationName": "Woking", "crs": "WOK", "st": "09:58", "et": "On time"},
                     ],
                 ],
             }
@@ -557,7 +722,7 @@ def test_fetch_departures_split_service_shows_relevant_portion_destination(
 
     board = fetch_departures(crs="WAT", filter_crs="WNT")
     assert len(board.departures) == 1
-    assert board.departures[0].destination == "Weybridge"
+    assert board.departures[0].destination == "Woking"
 
 
 # --- display_platform model tests ---
@@ -680,8 +845,8 @@ def test_platform_none_when_absent(mock_settings, mock_call):
 
 @patch("src.clients.ldb.call_departure_board_with_details")
 @patch("src.clients.ldb.get_settings")
-def test_split_service_correct_destination_and_platform(mock_settings, mock_call):
-    """Split service: destination is Weybridge (not Addlestone) AND platform is preserved."""
+def test_split_service_pre_split_destination_and_platform(mock_settings, mock_call):
+    """Split service: WNT is pre-split, so API destination is used. Platform preserved."""
     mock_settings.return_value = _settings()
     mock_call.return_value = {
         "trainServices": [{
@@ -690,24 +855,24 @@ def test_split_service_correct_destination_and_platform(mock_settings, mock_call
             "platform": "4",
             "operator": "South Western Railway",
             "isCancelled": False,
-            "destination": [{"locationName": "Addlestone", "crs": "ADS"}],
+            "destination": [{"locationName": "Woking", "crs": "WOK"}],
             "subsequentCallingPoints": [
                 [
                     {"locationName": "Vauxhall", "crs": "VXH", "st": "09:05", "et": "On time"},
                     {"locationName": "Wandsworth Town", "crs": "WNT", "st": "09:09", "et": "On time"},
                     {"locationName": "Weybridge", "crs": "WEY", "st": "09:45", "et": "On time"},
+                    {"locationName": "Addlestone", "crs": "ADS", "st": "09:53", "et": "On time"},
                 ],
                 [
                     {"locationName": "Weybridge", "crs": "WEY", "st": "09:45", "et": "On time"},
-                    {"locationName": "Byfleet & New Haw", "crs": "BYF", "st": "09:49", "et": "On time"},
-                    {"locationName": "Addlestone", "crs": "ADS", "st": "09:53", "et": "On time"},
+                    {"locationName": "Woking", "crs": "WOK", "st": "09:58", "et": "On time"},
                 ],
             ],
         }],
     }
     board = fetch_departures(crs="WAT", filter_crs="WNT")
     dep = board.departures[0]
-    assert dep.destination == "Weybridge"
+    assert dep.destination == "Woking"
     assert dep.platform == "4"
     assert dep.display_platform == "plat. 4"
 
