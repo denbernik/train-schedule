@@ -6,7 +6,7 @@ from src.config import get_settings
 from src.filters import filter_and_cap_departures
 from src.models import DepartureStatus, StationBoard, api_source_for
 from src.refresh import fetch_national_rail_for_leg, fetch_tfl_for_leg
-from src.routes import RouteLeg, load_routes
+from src.routes import Route, RouteLeg, load_routes
 from src.station_registry import StationInfo, load_stations, networks_compatible, selectbox_options
 from src.status import ActionStatus, compute_action_status
 
@@ -37,6 +37,102 @@ def _fetch_leg(leg: RouteLeg) -> StationBoard:
     raise ValueError(f"Unknown api_source: {leg.api_source}")
 
 
+def _validated_station_id(
+    station_id: str | None,
+    fallback_station_id: str,
+) -> str:
+    if station_id is None:
+        return fallback_station_id
+    return station_id if station_id in _option_idx else fallback_station_id
+
+
+def _validated_walk_minutes(raw_value: str | None, fallback: int) -> int:
+    try:
+        value = int(raw_value) if raw_value is not None else fallback
+    except (TypeError, ValueError):
+        return fallback
+    if _WALK_MIN_MINUTES <= value <= _WALK_MAX_MINUTES:
+        return value
+    return fallback
+
+
+def _seed_session_state_from_query(route_list: list[Route]) -> None:
+    """Seed session state from URL query params with safe fallback defaults."""
+    for route_idx, route in enumerate(route_list):
+        default_leg = route.legs[0]
+
+        walk_key = f"walk_{route.name}"
+        if walk_key not in st.session_state:
+            st.session_state[walk_key] = _validated_walk_minutes(
+                st.query_params.get(f"walk_{route_idx}"),
+                route.walking_time_minutes,
+            )
+
+        dep_key = f"dep_{route_idx}"
+        if dep_key not in st.session_state:
+            st.session_state[dep_key] = _validated_station_id(
+                st.query_params.get(dep_key, default_leg.origin_station_id),
+                default_leg.origin_station_id,
+            )
+
+        arr_key = f"arr_{route_idx}"
+        if arr_key not in st.session_state:
+            st.session_state[arr_key] = _validated_station_id(
+                st.query_params.get(arr_key, default_leg.destination_station_id),
+                default_leg.destination_station_id,
+            )
+
+
+def _render_page_chrome() -> None:
+    st.title("🚂 Departure Board")
+    st.caption(f"Auto-refresh every {_REFRESH_INTERVAL_SECONDS}s")
+
+    # Auto-refresh via JS timer — reload preserves the full URL (including query params).
+    # Also patches selectbox inputs so they clear-on-focus: the current value is
+    # auto-selected when the dropdown opens, meaning the user can type immediately
+    # to search without manually deleting the existing text first.
+    # A guard flag prevents duplicate listeners across Streamlit reruns.
+    components.html(
+        f"""
+        <script>
+          setTimeout(function() {{
+            window.parent.location.reload();
+          }}, {_REFRESH_INTERVAL_SECONDS * 1000});
+
+          (function() {{
+            var doc = window.parent.document;
+            if (doc.__stSelectClearAttached) return;
+            doc.__stSelectClearAttached = true;
+            // On every mousedown inside a baseweb Select, wait long enough for
+            // the component to open and populate the search input, then select
+            // all that text so the user can just start typing from scratch.
+            doc.addEventListener('mousedown', function(e) {{
+              var container = e.target.closest('[data-baseweb="select"]');
+              if (!container) return;
+              setTimeout(function() {{
+                var inp = container.querySelector('input');
+                if (inp && inp.value) {{ inp.select(); }}
+              }}, 80);
+            }}, true);
+          }})();
+        </script>
+        """,
+        height=0,
+        width=0,
+    )
+
+
+def _persist_query_params(
+    route_list: list[Route],
+    selections: list[tuple[StationInfo, StationInfo]],
+) -> None:
+    """Persist current controls to the URL so refresh/reload keeps state."""
+    for route_idx, route in enumerate(route_list):
+        st.query_params[f"walk_{route_idx}"] = str(st.session_state[f"walk_{route.name}"])
+        st.query_params[f"dep_{route_idx}"] = selections[route_idx][0].id
+        st.query_params[f"arr_{route_idx}"] = selections[route_idx][1].id
+
+
 routes = load_routes()
 
 # Maps each ActionStatus.display value to the corresponding Streamlit alert function.
@@ -47,75 +143,8 @@ _STATUS_DISPLAY = {
     "info":    st.info,
 }
 
-# ── Seed session state from URL query params, falling back to route defaults ──
-for _i, _route in enumerate(routes):
-    _default_leg = _route.legs[0]
-
-    # Walking time
-    _ss_walk = f"walk_{_route.name}"
-    if _ss_walk not in st.session_state:
-        _raw_walk = st.query_params.get(f"walk_{_i}")
-        try:
-            _v = int(_raw_walk) if _raw_walk is not None else _route.walking_time_minutes
-            st.session_state[_ss_walk] = (
-                _v if _WALK_MIN_MINUTES <= _v <= _WALK_MAX_MINUTES
-                else _route.walking_time_minutes
-            )
-        except (ValueError, TypeError):
-            st.session_state[_ss_walk] = _route.walking_time_minutes
-
-    # Departure station
-    _ss_dep = f"dep_{_i}"
-    if _ss_dep not in st.session_state:
-        _raw_dep = st.query_params.get(_ss_dep, _default_leg.origin_station_id)
-        st.session_state[_ss_dep] = (
-            _raw_dep if _raw_dep in _option_idx else _default_leg.origin_station_id
-        )
-
-    # Arrival station
-    _ss_arr = f"arr_{_i}"
-    if _ss_arr not in st.session_state:
-        _raw_arr = st.query_params.get(_ss_arr, _default_leg.destination_station_id)
-        st.session_state[_ss_arr] = (
-            _raw_arr if _raw_arr in _option_idx else _default_leg.destination_station_id
-        )
-
-st.title("🚂 Departure Board")
-st.caption(f"Auto-refresh every {_REFRESH_INTERVAL_SECONDS}s")
-
-# Auto-refresh via JS timer — reload preserves the full URL (including query params).
-# Also patches selectbox inputs so they clear-on-focus: the current value is
-# auto-selected when the dropdown opens, meaning the user can type immediately
-# to search without manually deleting the existing text first.
-# A guard flag prevents duplicate listeners across Streamlit reruns.
-components.html(
-    f"""
-    <script>
-      setTimeout(function() {{
-        window.parent.location.reload();
-      }}, {_REFRESH_INTERVAL_SECONDS * 1000});
-
-      (function() {{
-        var doc = window.parent.document;
-        if (doc.__stSelectClearAttached) return;
-        doc.__stSelectClearAttached = true;
-        // On every mousedown inside a baseweb Select, wait long enough for
-        // the component to open and populate the search input, then select
-        // all that text so the user can just start typing from scratch.
-        doc.addEventListener('mousedown', function(e) {{
-          var container = e.target.closest('[data-baseweb="select"]');
-          if (!container) return;
-          setTimeout(function() {{
-            var inp = container.querySelector('input');
-            if (inp && inp.value) {{ inp.select(); }}
-          }}, 80);
-        }}, true);
-      }})();
-    </script>
-    """,
-    height=0,
-    width=0,
-)
+_seed_session_state_from_query(routes)
+_render_page_chrome()
 
 def _swap_stations(idx: int) -> None:
     """Swap departure and arrival station selections for route column `idx`."""
@@ -494,7 +523,4 @@ for col_idx, (col, route) in enumerate(zip(columns, routes)):
             st.markdown("\n".join(cards_html), unsafe_allow_html=True)
 
 # ── Persist all selections into the URL (survives auto-refresh and manual reload) ──
-for _i, _route in enumerate(routes):
-    st.query_params[f"walk_{_i}"] = str(st.session_state[f"walk_{_route.name}"])
-    st.query_params[f"dep_{_i}"]  = _col_selections[_i][0].id
-    st.query_params[f"arr_{_i}"]  = _col_selections[_i][1].id
+_persist_query_params(routes, _col_selections)

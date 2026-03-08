@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import datetime
-
 from src.models import Departure
+from src.time_utils import minutes_until
 
 # Trains within RUSH_FACTOR × walking_time are included in the display list
 # so the user can see them alongside the 🏃 banner and decide to run for it.
@@ -27,23 +26,8 @@ def filter_and_cap_departures(
     for dep in departures:
         if dep.is_cancelled:
             continue
-        minutes_until = _minutes_until(dep)
-        if minutes_until is not None and minutes_until >= walking_time_minutes * RUSH_FACTOR:
+        dep_minutes = minutes_until(dep.expected_time)
+        if dep_minutes is not None and dep_minutes >= walking_time_minutes * RUSH_FACTOR:
             filtered.append(dep)
     filtered.sort(key=lambda dep: dep.expected_time)
     return filtered[:max_rows]
-
-
-def _minutes_until(dep: Departure) -> int | None:
-    """
-    Compute minutes until departure with timezone-safe `now`.
-    """
-    expected = dep.expected_time
-    now = (
-        datetime.now(expected.tzinfo)
-        if expected.tzinfo is not None
-        else datetime.now()
-    )
-    delta = expected - now
-    minutes = int(delta.total_seconds() / 60)
-    return minutes if minutes >= 0 else None

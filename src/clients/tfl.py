@@ -304,17 +304,7 @@ def _fetch_timetable_journey_minutes(
     if not line_ids:
         return None
 
-    directions = sorted(
-        {
-            item.get("direction", "").strip().lower()
-            for item in live_raw_arrivals
-            if isinstance(item.get("direction"), str)
-        }
-    )
-    directions = [d for d in directions if d in ("inbound", "outbound")] or [
-        "outbound",
-        "inbound",
-    ]
+    directions = _directions_for_timetable_queries(live_raw_arrivals)
 
     dest_lower = destination_station_id.strip().lower()
 
@@ -411,17 +401,7 @@ def _fetch_timetable_candidates(
     if not line_ids:
         return []
 
-    live_directions = sorted(
-        {
-            item.get("direction", "").strip().lower()
-            for item in live_raw_arrivals
-            if isinstance(item.get("direction"), str)
-        }
-    )
-    directions = [d for d in live_directions if d in ("inbound", "outbound")] or [
-        "outbound",
-        "inbound",
-    ]
+    directions = _directions_for_timetable_queries(live_raw_arrivals)
 
     candidates: list[dict] = []
     for line_id in line_ids:
@@ -460,6 +440,34 @@ def _fetch_timetable_candidates(
                 )
 
     return candidates
+
+
+def _directions_for_timetable_queries(live_raw_arrivals: list[dict]) -> list[str]:
+    """
+    Return direction query order for timetable calls.
+
+    Why query both directions:
+    - Late at night or during disruption, live arrivals at the origin station
+      may exist in only one direction.
+    - The user's destination can still be served in the opposite direction.
+
+    We keep live-observed direction(s) first for efficiency, then append the
+    missing direction so destination-aware timetable lookups do not miss service.
+    """
+    ordered: list[str] = []
+    for item in live_raw_arrivals:
+        direction = item.get("direction")
+        if not isinstance(direction, str):
+            continue
+        normalized = direction.strip().lower()
+        if normalized in ("inbound", "outbound") and normalized not in ordered:
+            ordered.append(normalized)
+
+    for fallback in ("outbound", "inbound"):
+        if fallback not in ordered:
+            ordered.append(fallback)
+
+    return ordered
 
 
 def _update_compass_cache(live_raw_arrivals: list[dict]) -> None:

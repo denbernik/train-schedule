@@ -11,6 +11,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 
+from src.time_utils import minutes_until as compute_minutes_until
+
 
 class DepartureStatus(Enum):
     """
@@ -177,14 +179,7 @@ class Departure:
         Minutes until departure from right now.
         Returns None if the departure is in the past (already gone).
         """
-        now = (
-            datetime.now(self.expected_time.tzinfo)
-            if self.expected_time.tzinfo is not None
-            else datetime.now()
-        )
-        delta = self.expected_time - now
-        minutes = int(delta.total_seconds() / 60)
-        return minutes if minutes >= 0 else None
+        return compute_minutes_until(self.expected_time)
 
 
 @dataclass

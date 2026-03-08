@@ -358,6 +358,63 @@ def test_live_below_window_fills_from_timetable_to_target(
 
 
 @patch("src.clients.tfl._get_topology_provider", return_value=FakeTopologyProvider())
+@patch("src.clients.tfl._call_timetable_api")
+@patch("src.clients.tfl._call_api")
+@patch("src.clients.tfl.get_settings")
+def test_timetable_fill_checks_both_directions_when_live_is_one_sided(
+    mock_settings,
+    mock_call_api,
+    mock_call_timetable_api,
+    mock_provider,
+):
+    # Simulate late-night one-sided live data: only Wimbledon services are live.
+    live_rows = [_arrival_in(3, "940GZZLUWIM", "Wimbledon"), _arrival_in(8, "940GZZLUWIM", "Wimbledon")]
+    for row in live_rows:
+        row["direction"] = "inbound"
+        row["platformName"] = "Westbound - Platform 2"
+    mock_call_api.return_value = live_rows
+
+    inbound_empty = {
+        "lineName": "District",
+        "stops": [
+            {"id": EAST_PUTNEY, "name": "East Putney Underground Station"},
+            {"id": EARLS_COURT, "name": "Earl's Court Underground Station"},
+        ],
+        "timetable": {"routes": []},
+    }
+
+    def _timetable_side_effect(*args, **kwargs):
+        direction = kwargs.get("direction")
+        if direction == "inbound":
+            return inbound_empty
+        return _timetable_payload_from_now([10, 12, 14, 16, 18, 20, 22, 24])
+
+    mock_call_timetable_api.side_effect = _timetable_side_effect
+
+    settings = MagicMock()
+    settings.tfl_station_id = EAST_PUTNEY
+    settings.max_departures = 5
+    settings.tfl_max_departures = 15
+    settings.tfl_api_key = "test-key"
+    mock_settings.return_value = settings
+
+    board = fetch_departures(
+        station_id=EAST_PUTNEY,
+        destination_station_id=EARLS_COURT,
+        max_results=15,
+    )
+
+    assert not board.has_error
+    assert len(board.departures) > 0
+    queried_directions = {
+        call.kwargs.get("direction")
+        for call in mock_call_timetable_api.call_args_list
+    }
+    assert "inbound" in queried_directions
+    assert "outbound" in queried_directions
+
+
+@patch("src.clients.tfl._get_topology_provider", return_value=FakeTopologyProvider())
 @patch("src.clients.tfl._call_timetable_api", side_effect=requests.RequestException("boom"))
 @patch("src.clients.tfl._call_api")
 @patch("src.clients.tfl.get_settings")

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 import json
 import logging
 
@@ -63,7 +63,11 @@ def fetch_departures(
         else:
             payload = call_departure_board(**call_kwargs)
 
-        departures = _parse_departures(payload, destination_crs=destination_crs)
+        departures = _parse_departures(
+            payload,
+            destination_crs=destination_crs,
+            reference_now=datetime.now(),
+        )
         departures.sort(key=lambda dep: dep.expected_time)
         return StationBoard(
             station_name=payload.get("locationName", crs),
@@ -226,7 +230,9 @@ def probe_departure_board(crs: str, *, filter_crs: str | None = None) -> dict:
 
 
 def _extract_arrival_time(
-    service: dict, destination_crs: str, today: date
+    service: dict,
+    destination_crs: str,
+    reference_now: datetime,
 ) -> datetime | None:
     """Extract arrival time at destination_crs from subsequentCallingPoints."""
     calling_points_raw = service.get("subsequentCallingPoints")
@@ -250,7 +256,7 @@ def _extract_arrival_time(
         for key in ("at", "et", "st"):
             value = point.get(key)
             if _is_time_value(value):
-                return _parse_time_value(value, today=today)
+                return _parse_time_value(value, reference_now=reference_now)
         return None
 
     return None
@@ -278,14 +284,17 @@ def _has_destination_in_calling_points(service: dict, destination_crs: str) -> b
 
 
 def _parse_departures(
-    payload: dict, *, destination_crs: str | None = None
+    payload: dict,
+    *,
+    destination_crs: str | None = None,
+    reference_now: datetime | None = None,
 ) -> list[Departure]:
     path, services = detect_service_rows(payload)
     if path == "<not-found>":
         return []
 
     departures: list[Departure] = []
-    today = date.today()
+    reference_now = reference_now or datetime.now()
     for service in services:
         has_calling_points = isinstance(service.get("subsequentCallingPoints"), list)
         if destination_crs and has_calling_points and not _has_destination_in_calling_points(service, destination_crs):
@@ -297,7 +306,11 @@ def _parse_departures(
             continue
         try:
             departures.append(
-                _parse_service(service, today=today, destination_crs=destination_crs)
+                _parse_service(
+                    service,
+                    reference_now=reference_now,
+                    destination_crs=destination_crs,
+                )
             )
         except (KeyError, TypeError, ValueError) as exc:
             logger.warning("Skipping malformed LDB service: %s", exc)
@@ -305,13 +318,16 @@ def _parse_departures(
 
 
 def _parse_service(
-    service: dict, today: date, *, destination_crs: str | None = None
+    service: dict,
+    reference_now: datetime,
+    *,
+    destination_crs: str | None = None,
 ) -> Departure:
-    scheduled_time = _parse_time_value(service["std"], today=today)
+    scheduled_time = _parse_time_value(service["std"], reference_now=reference_now)
 
     expected_raw = service.get("atd") or service.get("etd") or service["std"]
     expected_time = (
-        _parse_time_value(expected_raw, today=today)
+        _parse_time_value(expected_raw, reference_now=reference_now)
         if _is_time_value(expected_raw)
         else scheduled_time
     )
@@ -329,7 +345,7 @@ def _parse_service(
 
     arrival_time = None
     if destination_crs:
-        arrival_time = _extract_arrival_time(service, destination_crs, today)
+        arrival_time = _extract_arrival_time(service, destination_crs, reference_now)
 
     return Departure(
         destination=destination,
@@ -471,10 +487,10 @@ def _is_time_value(value: object) -> bool:
     return parts[0].isdigit() and parts[1].isdigit()
 
 
-def _parse_time_value(value: str, today: date) -> datetime:
+def _parse_time_value(value: str, reference_now: datetime) -> datetime:
     hours, minutes = map(int, value.split(":"))
-    parsed = datetime(today.year, today.month, today.day, hours, minutes)
-    if (datetime.now() - parsed).total_seconds() > 6 * 3600:
+    parsed = reference_now.replace(hour=hours, minute=minutes, second=0, microsecond=0)
+    if (reference_now - parsed).total_seconds() > 6 * 3600:
         parsed += timedelta(days=1)
     return parsed
 

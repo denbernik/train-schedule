@@ -16,10 +16,10 @@ Priority (highest → lowest): ⛔️ > 🏃‍♂️ > 🚶‍♂️ > ⚠️ >
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
 
 from src.filters import RUSH_FACTOR
 from src.models import Departure
+from src.time_utils import minutes_until
 
 
 @dataclass
@@ -28,14 +28,6 @@ class ActionStatus:
     label: str
     # Maps to the Streamlit alert function to call: "error" | "warning" | "success" | "info"
     display: str
-
-
-def _mins_until(dep: Departure) -> int | None:
-    """Timezone-safe minutes until departure; None if the departure is in the past."""
-    expected = dep.expected_time
-    now = datetime.now(expected.tzinfo) if expected.tzinfo is not None else datetime.now()
-    minutes = int((expected - now).total_seconds() / 60)
-    return minutes if minutes >= 0 else None
 
 
 def compute_action_status(
@@ -54,7 +46,7 @@ def compute_action_status(
 
     # ── Step 1: cancellation rate among the next 10 upcoming raw departures ──
     upcoming = sorted(
-        [d for d in raw_departures if _mins_until(d) is not None],
+        [d for d in raw_departures if minutes_until(d.expected_time) is not None],
         key=lambda d: d.expected_time,
     )[:10]
     cancelled_count = sum(1 for d in upcoming if d.is_cancelled)
@@ -64,7 +56,7 @@ def compute_action_status(
     for dep in sorted(raw_departures, key=lambda d: d.expected_time):
         if dep.is_cancelled:
             continue
-        m = _mins_until(dep)
+        m = minutes_until(dep.expected_time)
         if m is not None and m >= rush_floor:
             next_mins = m
             break

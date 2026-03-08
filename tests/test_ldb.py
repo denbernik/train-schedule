@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -8,6 +8,7 @@ from src.clients.ldb import (
     _destination_from_relevant_portion,
     _extract_arrival_time,
     _has_destination_in_calling_points,
+    _parse_time_value,
     call_departure_board,
     detect_service_rows,
     fetch_departures,
@@ -142,14 +143,13 @@ def test_fetch_departures_maps_cancelled_service(mock_settings, mock_call):
 
 # --- _extract_arrival_time tests ---
 
-_NOW = datetime.now()
-_TODAY = _NOW.date()
-_TEST_HOUR = (_NOW.hour + 1) % 24
+_REFERENCE_NOW = datetime(2026, 3, 8, 23, 30)
+_TEST_HOUR = 0
 
 
-def _dt(hour: int, minute: int) -> datetime:
-    """Build a datetime on _TODAY for compact assertions."""
-    return datetime(_TODAY.year, _TODAY.month, _TODAY.day, hour, minute)
+def _dt(hour: int, minute: int, *, day_offset: int = 0) -> datetime:
+    """Build a datetime near _REFERENCE_NOW for compact assertions."""
+    return _REFERENCE_NOW.replace(hour=hour, minute=minute, second=0, microsecond=0) + timedelta(days=day_offset)
 
 
 def test_extract_arrival_time_flat_list_shape():
@@ -160,8 +160,8 @@ def test_extract_arrival_time_flat_list_shape():
             {"locationName": "London Waterloo", "crs": "WAT", "st": f"{h}:40", "et": f"{h}:42"},
         ]]
     }
-    result = _extract_arrival_time(service, "WAT", _TODAY)
-    assert result == _dt(h, 42)
+    result = _extract_arrival_time(service, "WAT", _REFERENCE_NOW)
+    assert result == _dt(h, 42, day_offset=1)
 
 
 def test_extract_arrival_time_wrapped_shape():
@@ -174,8 +174,8 @@ def test_extract_arrival_time_wrapped_shape():
             ]}
         ]
     }
-    result = _extract_arrival_time(service, "WAT", _TODAY)
-    assert result == _dt(h, 43)
+    result = _extract_arrival_time(service, "WAT", _REFERENCE_NOW)
+    assert result == _dt(h, 43, day_offset=1)
 
 
 def test_extract_arrival_time_at_preferred_over_et_and_st():
@@ -185,8 +185,8 @@ def test_extract_arrival_time_at_preferred_over_et_and_st():
             {"crs": "WAT", "st": f"{h}:40", "et": f"{h}:42", "at": f"{h}:41"},
         ]]
     }
-    result = _extract_arrival_time(service, "WAT", _TODAY)
-    assert result == _dt(h, 41)
+    result = _extract_arrival_time(service, "WAT", _REFERENCE_NOW)
+    assert result == _dt(h, 41, day_offset=1)
 
 
 def test_extract_arrival_time_et_on_time_falls_back_to_st():
@@ -196,8 +196,8 @@ def test_extract_arrival_time_et_on_time_falls_back_to_st():
             {"crs": "WAT", "st": f"{h}:40", "et": "On time"},
         ]]
     }
-    result = _extract_arrival_time(service, "WAT", _TODAY)
-    assert result == _dt(h, 40)
+    result = _extract_arrival_time(service, "WAT", _REFERENCE_NOW)
+    assert result == _dt(h, 40, day_offset=1)
 
 
 def test_extract_arrival_time_no_crs_match():
@@ -207,7 +207,7 @@ def test_extract_arrival_time_no_crs_match():
             {"crs": "CLJ", "st": f"{h}:30", "et": f"{h}:31"},
         ]]
     }
-    result = _extract_arrival_time(service, "WAT", _TODAY)
+    result = _extract_arrival_time(service, "WAT", _REFERENCE_NOW)
     assert result is None
 
 
@@ -217,7 +217,7 @@ def test_extract_arrival_time_missing_keys():
             {"crs": "WAT"},
         ]]
     }
-    result = _extract_arrival_time(service, "WAT", _TODAY)
+    result = _extract_arrival_time(service, "WAT", _REFERENCE_NOW)
     assert result is None
 
 
@@ -228,8 +228,23 @@ def test_extract_arrival_time_case_insensitive_crs():
             {"crs": "wat", "st": f"{h}:40", "et": f"{h}:42"},
         ]]
     }
-    result = _extract_arrival_time(service, "Wat", _TODAY)
-    assert result == _dt(h, 42)
+    result = _extract_arrival_time(service, "Wat", _REFERENCE_NOW)
+    assert result == _dt(h, 42, day_offset=1)
+
+
+def test_extract_arrival_time_near_reference_stays_same_day():
+    service = {
+        "subsequentCallingPoints": [[
+            {"crs": "WAT", "st": "23:45", "et": "23:46"},
+        ]]
+    }
+    result = _extract_arrival_time(service, "WAT", _REFERENCE_NOW)
+    assert result == _dt(23, 46)
+
+
+def test_parse_time_value_rolls_to_next_day_when_far_past_reference():
+    parsed = _parse_time_value("00:15", reference_now=_REFERENCE_NOW)
+    assert parsed == _dt(0, 15, day_offset=1)
 
 
 # --- _has_destination_in_calling_points tests ---
