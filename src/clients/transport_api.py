@@ -37,6 +37,7 @@ from datetime import datetime, date
 
 import requests
 
+from src.clients.log_context import format_log_context
 from src.config import get_settings
 from src.models import Departure, DepartureStatus, StationBoard, StationType
 
@@ -67,6 +68,11 @@ def fetch_departures(
     settings = get_settings()
     station_code = station_code or settings.national_rail_station_code
     max_results = max_results or settings.max_departures
+    log_ctx = format_log_context(
+        origin=station_code,
+        destination=calling_at,
+        source="transport_api",
+    )
 
     try:
         raw_response = _call_api(
@@ -85,10 +91,11 @@ def fetch_departures(
         station_name = raw_response.get("station_name", station_code)
 
         logger.info(
-            "TransportAPI: fetched %d departures for %s (%s)",
+            "TransportAPI fetched %d departures for %s (%s) | %s",
             len(departures),
             station_name,
             station_code,
+            log_ctx,
         )
 
         return StationBoard(
@@ -98,16 +105,16 @@ def fetch_departures(
         )
 
     except requests.Timeout:
-        logger.error("TransportAPI timeout for station %s", station_code)
+        logger.error("TransportAPI timeout | %s", log_ctx)
         return _error_board(station_code, "TransportAPI timed out")
 
     except requests.HTTPError as e:
         status_code = e.response.status_code if e.response is not None else "unknown"
         logger.error(
-            "TransportAPI HTTP %s for station %s: %s",
+            "TransportAPI HTTP %s: %s | %s",
             status_code,
-            station_code,
             e,
+            log_ctx,
         )
         # Surface specific, actionable messages for common errors
         if e.response is not None and e.response.status_code == 401:
@@ -117,7 +124,7 @@ def fetch_departures(
         return _error_board(station_code, f"TransportAPI error (HTTP {status_code})")
 
     except requests.RequestException as e:
-        logger.error("TransportAPI request failed for station %s: %s", station_code, e)
+        logger.error("TransportAPI request failed: %s | %s", e, log_ctx)
         return _error_board(station_code, "Unable to reach TransportAPI")
 
     except (KeyError, ValueError, TypeError) as e:

@@ -3,13 +3,21 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from datetime import datetime, timedelta
+from datetime import datetime
 import json
 import logging
 
 import requests
 
 from src.config import get_settings
+from src.clients.log_context import format_log_context
+from src.clients.ldb_parsing import (
+    detect_service_rows as _detect_service_rows_impl,
+    is_time_value as _is_time_value_impl,
+    map_status as _map_status_impl,
+    nested_get as _nested_get_impl,
+    parse_time_value as _parse_time_value_impl,
+)
 from src.models import Departure, DepartureStatus, StationBoard, StationType
 
 logger = logging.getLogger(__name__)
@@ -38,6 +46,12 @@ def fetch_departures(
 ) -> dict:
     """Fetch and parse live departures for a CRS from LDB."""
     settings = get_settings()
+    log_ctx = format_log_context(
+        origin=crs,
+        destination=filter_crs,
+        source="ldb",
+        fallback="basic_ldb",
+    )
     max_results = num_rows if num_rows is not None else settings.max_departures
     call_kwargs = dict(
         crs=crs,
@@ -55,8 +69,8 @@ def fetch_departures(
                 destination_crs = filter_crs
             except LdbApiError:
                 logger.warning(
-                    "GetDepBoardWithDetails failed for %s; falling back to GetDepartureBoard",
-                    crs,
+                    "GetDepBoardWithDetails failed; falling back to GetDepartureBoard | %s",
+                    log_ctx,
                 )
                 payload = call_departure_board(**call_kwargs)
                 destination_crs = filter_crs
@@ -75,7 +89,7 @@ def fetch_departures(
             departures=departures[:max_results],
         )
     except LdbApiError as exc:
-        logger.error("LDB fetch failed for %s: %s", crs, exc)
+        logger.error("LDB fetch failed: %s | %s", exc, log_ctx)
         return _error_board(crs, str(exc))
 
 
@@ -461,66 +475,23 @@ def _destination_name(service: dict) -> str:
 
 
 def _map_status(service: dict, expected_raw: str, delay_minutes: int) -> DepartureStatus:
-    if service.get("isCancelled") is True:
-        return DepartureStatus.CANCELLED
-
-    text = str(expected_raw).strip().lower()
-    if "cancel" in text:
-        return DepartureStatus.CANCELLED
-    if text in {"on time", "starts here", "early"}:
-        return DepartureStatus.ON_TIME
-    if text in {"no report"}:
-        return DepartureStatus.NO_REPORT
-    if "delayed" in text or "late" in text:
-        return DepartureStatus.DELAYED
-    if _is_time_value(expected_raw):
-        return DepartureStatus.DELAYED if delay_minutes > 0 else DepartureStatus.ON_TIME
-    return DepartureStatus.NO_REPORT
+    return _map_status_impl(service, expected_raw, delay_minutes)
 
 
 def _is_time_value(value: object) -> bool:
-    if not isinstance(value, str):
-        return False
-    parts = value.split(":")
-    if len(parts) != 2:
-        return False
-    return parts[0].isdigit() and parts[1].isdigit()
+    return _is_time_value_impl(value)
 
 
 def _parse_time_value(value: str, reference_now: datetime) -> datetime:
-    hours, minutes = map(int, value.split(":"))
-    parsed = reference_now.replace(hour=hours, minute=minutes, second=0, microsecond=0)
-    if (reference_now - parsed).total_seconds() > 6 * 3600:
-        parsed += timedelta(days=1)
-    return parsed
+    return _parse_time_value_impl(value, reference_now)
 
 
 def detect_service_rows(payload: dict) -> tuple[str, list[dict]]:
-    """Find where service rows live in the response body."""
-    candidate_paths: list[tuple[str, ...]] = [
-        ("trainServices",),
-        ("GetDepartureBoardResult", "trainServices"),
-        ("getDepartureBoardResult", "trainServices"),
-        ("result", "trainServices"),
-        ("departures", "all"),
-    ]
-
-    for path in candidate_paths:
-        node = _nested_get(payload, path)
-        if isinstance(node, list):
-            rows = [item for item in node if isinstance(item, dict)]
-            return (".".join(path), rows)
-
-    return ("<not-found>", [])
+    return _detect_service_rows_impl(payload)
 
 
 def _nested_get(data: dict, path: Sequence[str]) -> object:
-    current: object = data
-    for key in path:
-        if not isinstance(current, dict):
-            return None
-        current = current.get(key)
-    return current
+    return _nested_get_impl(data, path)
 
 
 def _http_error_message(status_code: int) -> str:

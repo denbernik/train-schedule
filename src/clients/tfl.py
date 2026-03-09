@@ -22,6 +22,11 @@ from datetime import datetime, timedelta
 import requests
 
 from src.config import get_settings
+from src.clients.log_context import format_log_context
+from src.clients.tfl_merge import merge_departures_live_first as _merge_departures_live_first_impl
+from src.clients.tfl_strategy import (
+    directions_for_timetable_queries as _directions_for_timetable_queries_impl,
+)
 from src.clients.tfl_topology import TopologyUnavailableError, TubeTopologyProvider
 from src.models import Departure, DepartureStatus, StationBoard, StationType
 
@@ -91,6 +96,12 @@ def fetch_departures(
     station_id = station_id or settings.tfl_station_id
     max_results = max_results or getattr(settings, "tfl_max_departures", settings.max_departures)
     timeout_seconds = settings.tfl_timeout_seconds
+    log_ctx = format_log_context(
+        origin=station_id,
+        destination=destination_station_id,
+        source="tfl",
+        fallback="timetable",
+    )
 
     try:
         all_live_raw_arrivals = _call_api(station_id, settings.tfl_api_key, timeout_seconds)
@@ -170,11 +181,12 @@ def fetch_departures(
         )
 
         logger.info(
-            "TfL: fetched %d departures for station %s (live=%d timetable=%d)",
+            "TfL fetched %d departures for station %s (live=%d timetable=%d) | %s",
             len(departures),
             station_id,
             len(live_departures),
             len(timetable_departures),
+            log_ctx,
         )
 
         return StationBoard(
@@ -186,11 +198,11 @@ def fetch_departures(
         )
 
     except requests.Timeout:
-        logger.error("TfL API timeout for station %s", station_id)
+        logger.error("TfL API timeout | %s", log_ctx)
         return _error_board(station_id, "TfL API timed out — showing stale data")
 
     except requests.RequestException as e:
-        logger.error("TfL API request failed for station %s: %s", station_id, e)
+        logger.error("TfL API request failed: %s | %s", e, log_ctx)
         return _error_board(station_id, "Unable to reach TfL — check connection")
 
     except (KeyError, ValueError, TypeError) as e:
@@ -454,20 +466,7 @@ def _directions_for_timetable_queries(live_raw_arrivals: list[dict]) -> list[str
     We keep live-observed direction(s) first for efficiency, then append the
     missing direction so destination-aware timetable lookups do not miss service.
     """
-    ordered: list[str] = []
-    for item in live_raw_arrivals:
-        direction = item.get("direction")
-        if not isinstance(direction, str):
-            continue
-        normalized = direction.strip().lower()
-        if normalized in ("inbound", "outbound") and normalized not in ordered:
-            ordered.append(normalized)
-
-    for fallback in ("outbound", "inbound"):
-        if fallback not in ordered:
-            ordered.append(fallback)
-
-    return ordered
+    return _directions_for_timetable_queries_impl(live_raw_arrivals)
 
 
 def _update_compass_cache(live_raw_arrivals: list[dict]) -> None:
@@ -1014,81 +1013,12 @@ def _merge_departures_live_first(
     """
     Merge departures in live-first mode, filling gaps from timetable rows.
     """
-    live_sorted = sorted(live_departures, key=lambda d: d.expected_time)
-    if len(live_sorted) >= max_results:
-        return live_sorted[:max_results]
-
-    merged = list(live_sorted)
-    seen = {_departure_dedupe_key(dep) for dep in merged}
-
-    for dep in sorted(timetable_departures, key=lambda d: d.expected_time):
-        if len(merged) >= max_results:
-            break
-        live_match_index = _find_live_boundary_match_index(
-            merged_departures=merged,
-            timetable_dep=dep,
-            tolerance_seconds=_LIVE_TT_TOLERANCE_SECONDS,
-        )
-        if live_match_index is not None:
-            live_dep = merged[live_match_index]
-            # Guardrail for occasional API skew: if TT says earlier than live,
-            # keep live and drop TT.
-            if dep.expected_time < live_dep.expected_time:
-                continue
-
-            old_key = _departure_dedupe_key(live_dep)
-            seen.discard(old_key)
-            merged[live_match_index] = dep
-            seen.add(_departure_dedupe_key(dep))
-            continue
-
-        key = _departure_dedupe_key(dep)
-        if key in seen:
-            continue
-        seen.add(key)
-        merged.append(dep)
-
-    merged.sort(key=lambda d: d.expected_time)
-    return merged[:max_results]
-
-
-def _departure_dedupe_key(dep: Departure) -> tuple[str, str, str]:
-    """Stable dedupe key for live+timetable merge."""
-    return (
-        dep.destination.strip().lower(),
-        (dep.operator or "").strip().lower(),
-        dep.expected_time.strftime("%Y-%m-%d %H:%M"),
+    return _merge_departures_live_first_impl(
+        live_departures=live_departures,
+        timetable_departures=timetable_departures,
+        max_results=max_results,
+        tolerance_seconds=_LIVE_TT_TOLERANCE_SECONDS,
     )
-
-
-def _find_live_boundary_match_index(
-    merged_departures: list[Departure],
-    timetable_dep: Departure,
-    tolerance_seconds: int,
-) -> int | None:
-    """
-    Find a matching live departure near timetable boundary.
-
-    Match conditions:
-    - existing row is live (status != NO_REPORT)
-    - same normalized destination and operator
-    - absolute time delta <= tolerance_seconds
-    """
-    target_destination = timetable_dep.destination.strip().lower()
-    target_operator = (timetable_dep.operator or "").strip().lower()
-
-    for index, existing in enumerate(merged_departures):
-        if existing.status == DepartureStatus.NO_REPORT:
-            continue
-        if existing.destination.strip().lower() != target_destination:
-            continue
-        if (existing.operator or "").strip().lower() != target_operator:
-            continue
-        delta_seconds = abs((timetable_dep.expected_time - existing.expected_time).total_seconds())
-        if delta_seconds <= tolerance_seconds:
-            return index
-
-    return None
 
 
 def _clean_destination(name: str) -> str:

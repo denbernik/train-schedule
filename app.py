@@ -2,13 +2,18 @@ import html as _html
 import streamlit as st
 import streamlit.components.v1 as components
 
+from src.app_logic import (
+    persist_route_state,
+    prepare_visible_departure_rows,
+    seed_route_state,
+    station_pair_validation_error,
+    status_for_board,
+)
 from src.config import get_settings
-from src.filters import filter_and_cap_departures
 from src.models import DepartureStatus, StationBoard, api_source_for
 from src.refresh import fetch_national_rail_for_leg, fetch_tfl_for_leg
-from src.routes import Route, RouteLeg, load_routes
-from src.station_registry import StationInfo, load_stations, networks_compatible, selectbox_options
-from src.status import ActionStatus, compute_action_status
+from src.routes import RouteLeg, load_routes
+from src.station_registry import StationInfo, selectbox_options
 
 settings = get_settings()
 _TFL_MAX_RESULTS = settings.tfl_max_departures
@@ -35,52 +40,6 @@ def _fetch_leg(leg: RouteLeg) -> StationBoard:
             max_results=_TFL_MAX_RESULTS,
         )
     raise ValueError(f"Unknown api_source: {leg.api_source}")
-
-
-def _validated_station_id(
-    station_id: str | None,
-    fallback_station_id: str,
-) -> str:
-    if station_id is None:
-        return fallback_station_id
-    return station_id if station_id in _option_idx else fallback_station_id
-
-
-def _validated_walk_minutes(raw_value: str | None, fallback: int) -> int:
-    try:
-        value = int(raw_value) if raw_value is not None else fallback
-    except (TypeError, ValueError):
-        return fallback
-    if _WALK_MIN_MINUTES <= value <= _WALK_MAX_MINUTES:
-        return value
-    return fallback
-
-
-def _seed_session_state_from_query(route_list: list[Route]) -> None:
-    """Seed session state from URL query params with safe fallback defaults."""
-    for route_idx, route in enumerate(route_list):
-        default_leg = route.legs[0]
-
-        walk_key = f"walk_{route.name}"
-        if walk_key not in st.session_state:
-            st.session_state[walk_key] = _validated_walk_minutes(
-                st.query_params.get(f"walk_{route_idx}"),
-                route.walking_time_minutes,
-            )
-
-        dep_key = f"dep_{route_idx}"
-        if dep_key not in st.session_state:
-            st.session_state[dep_key] = _validated_station_id(
-                st.query_params.get(dep_key, default_leg.origin_station_id),
-                default_leg.origin_station_id,
-            )
-
-        arr_key = f"arr_{route_idx}"
-        if arr_key not in st.session_state:
-            st.session_state[arr_key] = _validated_station_id(
-                st.query_params.get(arr_key, default_leg.destination_station_id),
-                default_leg.destination_station_id,
-            )
 
 
 def _render_page_chrome() -> None:
@@ -122,17 +81,6 @@ def _render_page_chrome() -> None:
     )
 
 
-def _persist_query_params(
-    route_list: list[Route],
-    selections: list[tuple[StationInfo, StationInfo]],
-) -> None:
-    """Persist current controls to the URL so refresh/reload keeps state."""
-    for route_idx, route in enumerate(route_list):
-        st.query_params[f"walk_{route_idx}"] = str(st.session_state[f"walk_{route.name}"])
-        st.query_params[f"dep_{route_idx}"] = selections[route_idx][0].id
-        st.query_params[f"arr_{route_idx}"] = selections[route_idx][1].id
-
-
 routes = load_routes()
 
 # Maps each ActionStatus.display value to the corresponding Streamlit alert function.
@@ -143,8 +91,27 @@ _STATUS_DISPLAY = {
     "info":    st.info,
 }
 
-_seed_session_state_from_query(routes)
+seed_route_state(
+    session_state=st.session_state,
+    query_params=st.query_params,
+    routes=routes,
+    option_idx=_option_idx,
+    walk_min_minutes=_WALK_MIN_MINUTES,
+    walk_max_minutes=_WALK_MAX_MINUTES,
+)
 _render_page_chrome()
+
+
+def _build_dynamic_leg(dep_info: StationInfo, arr_info: StationInfo) -> RouteLeg:
+    """Create a RouteLeg from current UI station selections."""
+    return RouteLeg(
+        origin_station_id=dep_info.id,
+        origin_name=dep_info.name,
+        destination_station_id=arr_info.id,
+        destination_name=arr_info.name,
+        transport_mode=dep_info.station_type,
+        api_source=api_source_for(dep_info.station_type),
+    )
 
 def _swap_stations(idx: int) -> None:
     """Swap departure and arrival station selections for route column `idx`."""
@@ -451,39 +418,15 @@ for col_idx, (col, route) in enumerate(zip(columns, routes)):
                 st.button("＋", key=f"wi_{col_idx}", on_click=_walk_inc,
                           args=(route.name,), use_container_width=True)
 
-        # ── Network compatibility check ───────────────────────────────────────
-        if not networks_compatible(dep_info, arr_info):
-            dep_net = "TfL" if dep_info.network == "tfl" else "National Rail"
-            arr_net = "TfL" if arr_info.network == "tfl" else "National Rail"
+        # ── Pair validation check ─────────────────────────────────────────────
+        pair_error = station_pair_validation_error(dep_info, arr_info)
+        if pair_error:
             with _right_col:
-                st.error(
-                    f"**Network mismatch — cannot show departures**\n\n"
-                    f"**{dep_info.name}** is on **{dep_net}** "
-                    f"but **{arr_info.name}** is on **{arr_net}**.\n\n"
-                    f"Select two stations on the same network."
-                )
-            continue
-
-        # ── Service type compatibility check (within TfL) ────────────────────
-        if dep_info.network == "tfl" and dep_info.mode != arr_info.mode:
-            with _right_col:
-                st.error(
-                    f"**Service type mismatch — cannot show departures**\n\n"
-                    f"**{dep_info.name}** is **{dep_info.display_label.split('(')[-1].rstrip(')')}** "
-                    f"but **{arr_info.name}** is **{arr_info.display_label.split('(')[-1].rstrip(')')}**.\n\n"
-                    f"Select two stations on the same service."
-                )
+                st.error(pair_error)
             continue
 
         # ── Build RouteLeg dynamically and fetch ──────────────────────────────
-        dynamic_leg = RouteLeg(
-            origin_station_id=dep_info.id,
-            origin_name=dep_info.name,
-            destination_station_id=arr_info.id,
-            destination_name=arr_info.name,
-            transport_mode=dep_info.station_type,
-            api_source=api_source_for(dep_info.station_type),
-        )
+        dynamic_leg = _build_dynamic_leg(dep_info, arr_info)
 
         board = _fetch_leg(dynamic_leg)
 
@@ -498,24 +441,23 @@ for col_idx, (col, route) in enumerate(zip(columns, routes)):
                     "Select two stations with a through train between them."
                 )
             else:
-                action = compute_action_status(board.departures, walking_time)
-                _STATUS_DISPLAY[action.display](f"{action.emoji} {action.label}")
+                action = status_for_board(board, walking_time)
+                if action:
+                    _STATUS_DISPLAY[action.display](f"{action.emoji} {action.label}")
 
         if board.has_error or board.no_direct_route:
             continue
 
         # ── Departures list (full-width within route column) ──────────────────
-        visible_departures = filter_and_cap_departures(
-            departures=board.departures,
+        visible_departure_rows = prepare_visible_departure_rows(
+            board=board,
+            api_source=dynamic_leg.api_source,
             walking_time_minutes=walking_time,
             max_rows=_FINAL_DISPLAY_ROWS,
         )
         is_tfl = dynamic_leg.api_source == "tfl"
         cards_html: list[str] = []
-        for dep in visible_departures:
-            plat_override: str | None = None
-            if dep.display_platform is None and not is_tfl:
-                plat_override = "plat. TBD"
+        for dep, plat_override in visible_departure_rows:
             cards_html.append(
                 _render_departure_html(dep, is_tfl, walking_time, plat_override)
             )
@@ -523,4 +465,9 @@ for col_idx, (col, route) in enumerate(zip(columns, routes)):
             st.markdown("\n".join(cards_html), unsafe_allow_html=True)
 
 # ── Persist all selections into the URL (survives auto-refresh and manual reload) ──
-_persist_query_params(routes, _col_selections)
+persist_route_state(
+    query_params=st.query_params,
+    session_state=st.session_state,
+    routes=routes,
+    selections=_col_selections,
+)
